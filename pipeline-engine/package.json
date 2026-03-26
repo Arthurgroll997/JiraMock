@@ -1,0 +1,16 @@
+{
+  "name": "pamlab-pipeline-engine",
+  "version": "1.0.0",
+  "description": "PAMlab Pipeline Engine — Modulare Action Chains für Enterprise Access Management",
+  "main": "src/api.js",
+  "scripts": {
+    "start": "node src/api.js",
+    "cli": "node src/cli.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "js-yaml": "^4.1.0",
+    "uuid": "^9.0.0"
+  }
+}

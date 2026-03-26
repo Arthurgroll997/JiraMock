@@ -48,6 +48,32 @@ services:
       timeout: 5s
       retries: 3
 
+  pipeline-engine:
+    build:
+      context: ./pipeline-engine
+      dockerfile: Dockerfile
+    container_name: pamlab-pipeline-engine
+    ports:
+      - "8446:8446"
+    environment:
+      - PORT=8446
+      - FUDO_URL=http://fudo-mock:8443
+      - M42_URL=http://matrix42-mock:8444
+      - AD_URL=http://ad-mock:8445
+    depends_on:
+      fudo-mock:
+        condition: service_healthy
+      matrix42-mock:
+        condition: service_healthy
+      ad-mock:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8446/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   studio:
     build:
       context: ./pamlab-studio

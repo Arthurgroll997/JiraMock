@@ -30,6 +30,7 @@ PAMlab is a **complete developer sandbox** for building and testing enterprise a
 | 🔐 **Fudo PAM** | Privileged Access Management — session recording, password rotation, JIT access | `8443` |
 | 📋 **Matrix42 ESM** | Enterprise Service Management — asset management, ticketing, approval workflows | `8444` |
 | 🏢 **Active Directory** | Directory services — users, groups, OUs, computer objects | `8445` |
+| 🔗 **Pipeline Engine** | Modular action chain builder — orchestrates workflows across all systems | `8446` |
 | 🖥️ **PAMlab Studio** | Web-based IDE for building and testing integration scripts | `3000` |
 
 ### The Problem
@@ -516,6 +517,16 @@ PAMlab/
 │   ├── Dockerfile
 │   └── package.json
 │
+├── pipeline-engine/            # 🔗 Pipeline Engine (YAML workflows)
+│   ├── src/
+│   │   ├── engine/             #    PipelineRunner, StepExecutor, Rollback
+│   │   ├── connectors/         #    Fudo, Matrix42, AD connectors
+│   │   ├── api.js              #    REST API (port 8446)
+│   │   └── cli.js              #    CLI runner
+│   ├── pipelines/              #    5 YAML pipeline templates
+│   ├── Dockerfile
+│   └── package.json
+│
 ├── pamlab-studio/              # 🖥️ Web Frontend (React + TypeScript)
 │   ├── src/
 │   │   ├── components/         #    Dashboard, Editor, Explorer, etc.
@@ -629,6 +640,42 @@ rollback:                         # ← If anything fails, undo everything
 | 🔀 **Any Combination** | Matrix42→AD→Fudo, JSM→AzureAD→CyberArk, SNOW→AD→Fudo... |
 
 > See [Epic #5](https://github.com/BenediktSchackenberg/PAMlab/issues/5) for the full Pipeline Engine specification.
+
+---
+
+## 🔗 Pipeline Engine (Port 8446)
+
+The Pipeline Engine orchestrates workflows across all three mock APIs using YAML-based pipeline definitions.
+
+```bash
+# Run a pipeline via CLI
+cd pipeline-engine
+node src/cli.js run pipelines/onboarding-with-approval.yaml --vars user=j.doe,group=Server-Admins
+
+# Or via REST API
+curl -X POST http://localhost:8446/pipelines/run \
+  -H "Content-Type: application/json" \
+  -d '{"file": "onboarding-with-approval.yaml", "vars": {"user": "j.doe", "group": "Server-Admins"}}'
+```
+
+### Pipeline Templates
+
+| Template | Scenario |
+|----------|----------|
+| `onboarding-with-approval.yaml` | M42 ticket → AD user → group → Fudo sync → audit |
+| `offboarding-emergency.yaml` | Fudo block → AD disable → M42 incident |
+| `jit-temporary-access.yaml` | Timed group membership with auto-revoke |
+| `password-rotation-campaign.yaml` | Policy rotation + compliance report |
+| `security-incident-response.yaml` | Terminate sessions → block → incidents |
+
+### Key Features
+
+- **Variable interpolation** — `{{ trigger.user }}`, `{{ steps.step-name.result.id }}`
+- **Automatic rollback** — On failure, undo completed steps in reverse order
+- **Dry-run mode** — Validate without executing
+- **3 connectors** — Fudo PAM, Matrix42 ESM, Active Directory with auto-authentication
+
+See [`pipeline-engine/README.md`](pipeline-engine/README.md) for full documentation.
 
 ---
 
