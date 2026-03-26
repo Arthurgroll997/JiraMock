@@ -553,6 +553,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
+## 🗺️ Roadmap
+
+PAMlab is growing! Future mock APIs for additional ITSM platforms:
+
+| Epic | System | Port | Status |
+|------|--------|------|--------|
+| [#2](https://github.com/BenediktSchackenberg/PAMlab/issues/2) | 🎫 **Jira Service Management** — Atlassian JSM (incidents, approvals, assets) | `8446` | Planned |
+| [#3](https://github.com/BenediktSchackenberg/PAMlab/issues/3) | 🔧 **ServiceNow** — Table API, CMDB, change management | `8447` | Planned |
+| [#4](https://github.com/BenediktSchackenberg/PAMlab/issues/4) | 🏢 **BMC Remedy / Helix ITSM** — Incidents, changes, CMDB | `8448` | Planned |
+
+> Want another ITSM system? [Open an issue!](https://github.com/BenediktSchackenberg/PAMlab/issues/new)
+
+---
+
 ## ⚠️ Disclaimer
 
 PAMlab is an **independent open-source project** for development and testing purposes only. It is **not affiliated with** Fudo Security, Matrix42 AG, or Microsoft. See [DISCLAIMER.md](DISCLAIMER.md).
