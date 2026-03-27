@@ -23,7 +23,7 @@
 
 ## 🎯 What is PAMlab?
 
-PAMlab is a **complete developer sandbox** for building and testing enterprise access management integrations. It simulates a real-world IT environment with **five interconnected mock APIs**, a pipeline engine, and a web-based IDE:
+PAMlab is a **complete developer sandbox** for building and testing enterprise access management integrations. It simulates a real-world IT environment with **six interconnected mock APIs**, a pipeline engine, and a web-based IDE:
 
 | System | What it simulates | Port | Endpoints |
 |--------|-------------------|------|-----------|
@@ -32,6 +32,7 @@ PAMlab is a **complete developer sandbox** for building and testing enterprise a
 | 🏢 **Active Directory** | Directory services — users, groups, OUs, computer objects | `8445` | 25+ |
 | ❄️ **ServiceNow ITSM** | ITSM — incidents, changes, CMDB, service catalog, events | `8447` | 30+ |
 | 🎫 **Jira Service Mgmt** | ITSM — issues, JQL search, workflow transitions, approvals, assets, SLA tracking | `8448` | 30+ |
+| 🏥 **BMC Remedy/Helix** | ITSM — incidents, changes, CMDB, work orders, SLA, Remedy REST API | `8449` | 30+ |
 | 🔗 **Pipeline Engine** | Modular action chain builder — orchestrates workflows across all systems | `8446` | — |
 | 🖥️ **PAMlab Studio** | Web-based IDE for building and testing integration scripts | `3000` | — |
 
@@ -47,7 +48,7 @@ But you can't test against production. Setting up dev instances of all these sys
 
 ```bash
 docker-compose up
-# → 5 mock APIs + pipeline engine + web IDE running in seconds
+# → 6 mock APIs + pipeline engine + web IDE running in seconds
 # → Build your integration scripts
 # → Test the complete workflow end-to-end
 # → Export scripts and deploy to production (just change the URLs)
@@ -70,7 +71,7 @@ cd PAMlab
 docker-compose up
 ```
 
-This starts **all 7 services**. Open [http://localhost:3000](http://localhost:3000) for PAMlab Studio.
+This starts **all 8 services**. Open [http://localhost:3000](http://localhost:3000) for PAMlab Studio.
 
 ### Option 2: Manual (Run Each Service Individually)
 
@@ -93,10 +94,13 @@ cd servicenow-mock-api && npm install && npm start
 # Terminal 5: JSM Mock (port 8448)
 cd jsm-mock-api && npm install && npm start
 
-# Terminal 6: Pipeline Engine (port 8446)
+# Terminal 6: Remedy Mock (port 8449)
+cd remedy-mock-api && npm install && npm start
+
+# Terminal 7: Pipeline Engine (port 8446)
 cd pipeline-engine && npm install && npm start
 
-# Terminal 7: PAMlab Studio (port 3000)
+# Terminal 8: PAMlab Studio (port 3000)
 cd pamlab-studio && npm install && npm run dev
 ```
 
@@ -109,6 +113,7 @@ curl -s http://localhost:8444/health | jq .
 curl -s http://localhost:8445/health | jq .
 curl -s http://localhost:8447/health | jq .
 curl -s http://localhost:8448/health | jq .
+curl -s http://localhost:8449/health | jq .
 
 # 🔐 Fudo PAM — Login
 curl -X POST http://localhost:8443/api/v2/auth/login \
@@ -134,6 +139,10 @@ curl -s -X POST http://localhost:8448/rest/api/2/search \
   -H "Authorization: Bearer pamlab-dev-token" \
   -H "Content-Type: application/json" \
   -d '{"jql":"project = ITSM AND issuetype = Incident","maxResults":5}' | jq '.total'
+
+# 🏥 Remedy — List incidents
+curl -s "http://localhost:8449/api/arsys/v1/entry/HPD%3AHelp%20Desk" \
+  -H "Authorization: Bearer pamlab-dev-token" | jq '.entries | length'
 ```
 
 > **Default API token for all services:** `pamlab-dev-token`
@@ -148,17 +157,17 @@ curl -s -X POST http://localhost:8448/rest/api/2/search \
 │      Dashboard • Scenario Builder • Code Editor • API Explorer • Events      │
 └────┬──────────┬──────────┬──────────┬──────────┬──────────┬─────────────────┘
      │          │          │          │          │          │
-┌────▼────┐ ┌──▼────┐ ┌───▼───┐ ┌───▼─────┐ ┌─▼──────┐ ┌▼──────────┐
-│ Matrix42│ │Active │ │ Fudo  │ │ServiceNow│ │  JSM   │ │ Pipeline  │
-│  ESM    │ │Direct.│ │  PAM  │ │  ITSM   │ │        │ │  Engine   │
-│ (:8444) │ │(:8445)│ │(:8443)│ │ (:8447) │ │(:8448) │ │ (:8446)   │
-│         │ │       │ │       │ │         │ │        │ │           │
-│• Assets │ │• Users│ │• Sess.│ │• Incid. │ │• Issues│ │• YAML     │
-│• Tickets│ │• Group│ │• Accts│ │• Changes│ │• JQL   │ │• Rollback │
-│• Approv.│ │• OUs  │ │• Safes│ │• CMDB   │ │• SLA   │ │• Dry-run  │
-│• Provisi│ │• Comp.│ │• JIT  │ │• Catalog│ │• Assets│ │• 5 connec.│
-│• Webhook│ │• LDAP │ │• Events││• Events │ │• Approv│ │• Variables│
-└─────────┘ └───────┘ └───────┘ └─────────┘ └────────┘ └───────────┘
+┌────▼────┐ ┌──▼────┐ ┌───▼───┐ ┌───▼─────┐ ┌─▼──────┐ ┌▼────────┐ ┌▼──────────┐
+│ Matrix42│ │Active │ │ Fudo  │ │ServiceNow│ │  JSM   │ │ Remedy  │ │ Pipeline  │
+│  ESM    │ │Direct.│ │  PAM  │ │  ITSM   │ │        │ │  Helix  │ │  Engine   │
+│ (:8444) │ │(:8445)│ │(:8443)│ │ (:8447) │ │(:8448) │ │ (:8449) │ │ (:8446)   │
+│         │ │       │ │       │ │         │ │        │ │         │ │           │
+│• Assets │ │• Users│ │• Sess.│ │• Incid. │ │• Issues│ │• Incid. │ │• YAML     │
+│• Tickets│ │• Group│ │• Accts│ │• Changes│ │• JQL   │ │• Changes│ │• Rollback │
+│• Approv.│ │• OUs  │ │• Safes│ │• CMDB   │ │• SLA   │ │• CMDB   │ │• Dry-run  │
+│• Provisi│ │• Comp.│ │• JIT  │ │• Catalog│ │• Assets│ │• Work Or│ │• 6 connec.│
+│• Webhook│ │• LDAP │ │• Events││• Events │ │• Approv│ │• SLA    │ │• Variables│
+└─────────┘ └───────┘ └───────┘ └─────────┘ └────────┘ └─────────┘ └───────────┘
 ```
 
 ### Shared Test Data (Consistent Across All Systems)
@@ -168,23 +177,23 @@ All mock APIs share the same **10 test users**, **5 servers**, and consistent id
 | User | Role | Present in |
 |------|------|-----------|
 | `admin` | System Administrator | All systems |
-| `j.doe` (John Doe) | IT Operations Lead | AD, Fudo, SNOW, JSM |
-| `a.smith` (Alice Smith) | Security Analyst | AD, Fudo, SNOW, JSM |
-| `b.wilson` (Bob Wilson) | Network Engineer | AD, Fudo, SNOW, JSM |
-| `c.jones` (Carol Jones) | Change Manager | AD, Fudo, SNOW, JSM |
-| `svc-integration` | Integration Service Account | AD, Fudo, SNOW |
-| `svc-fudo-sync` | Fudo AD Sync Account | AD, Fudo, SNOW |
-| `svc-matrix42` | Matrix42 Service Account | AD, Matrix42, SNOW |
-| `t.developer` (Tom Developer) | Developer | AD, JSM |
-| `l.leaving` (Lisa Leaving) | Departing Employee | AD, Fudo |
+| `j.doe` (John Doe) | IT Operations Lead | AD, Fudo, SNOW, JSM, Remedy |
+| `a.smith` (Alice Smith) | Security Analyst | AD, Fudo, SNOW, JSM, Remedy |
+| `b.wilson` (Bob Wilson) | Network Engineer | AD, Fudo, SNOW, JSM, Remedy |
+| `c.jones` (Carol Jones) | Change Manager | AD, Fudo, SNOW, JSM, Remedy |
+| `svc-integration` | Integration Service Account | AD, Fudo, SNOW, Remedy |
+| `svc-fudo-sync` | Fudo AD Sync Account | AD, Fudo, SNOW, Remedy |
+| `svc-matrix42` | Matrix42 Service Account | AD, Matrix42, SNOW, Remedy |
+| `t.developer` (Tom Developer) | Developer | AD, JSM, Remedy |
+| `l.leaving` (Lisa Leaving) | Departing Employee | AD, Fudo, Remedy |
 
 | Server | IP | OS | In CMDB |
 |--------|----|----|---------|
-| DC01 | 10.0.1.10 | Windows Server 2022 | SNOW ✅ JSM ✅ |
-| DB-PROD | 10.0.1.20 | Ubuntu 22.04 | SNOW ✅ JSM ✅ |
-| APP-ERP | 10.0.1.30 | Windows Server 2022 | SNOW ✅ JSM ✅ |
-| FILE-SRV01 | 10.0.1.40 | Windows Server 2022 | SNOW ✅ JSM ✅ |
-| FUDO-PAM | 10.0.1.50 | Fudo OS 6.1 | SNOW ✅ JSM ✅ |
+| DC01 | 10.0.1.10 | Windows Server 2022 | SNOW ✅ JSM ✅ Remedy ✅ |
+| DB-PROD | 10.0.1.20 | Ubuntu 22.04 | SNOW ✅ JSM ✅ Remedy ✅ |
+| APP-ERP | 10.0.1.30 | Windows Server 2022 | SNOW ✅ JSM ✅ Remedy ✅ |
+| FILE-SRV01 | 10.0.1.40 | Windows Server 2022 | SNOW ✅ JSM ✅ Remedy ✅ |
+| FUDO-PAM | 10.0.1.50 | Fudo OS 6.1 | SNOW ✅ JSM ✅ Remedy ✅ |
 
 ---
 
@@ -589,15 +598,108 @@ Supports `required_count` — e.g. 2 approvers set, only 1 required = first appr
 
 ---
 
+### 🏥 BMC Remedy / Helix ITSM API (Port 8449)
+
+Simulates the [BMC Helix ITSM](https://www.bmc.com/it-solutions/bmc-helix-itsm.html) (formerly Remedy) REST API — **30+ endpoints**:
+
+<details>
+<summary><b>Authentication</b> — AR-JWT tokens + Bearer + Basic</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/jwt/login` | Login → returns AR-JWT token (plain text UUID) |
+| DELETE | `/api/jwt/logout` | Invalidate AR-JWT token |
+
+Three auth methods: `Authorization: AR-JWT <token>`, `Authorization: Bearer pamlab-dev-token`, or Basic auth.
+
+```bash
+# Get AR-JWT token
+TOKEN=$(curl -s -X POST http://localhost:8449/api/jwt/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin"}')
+
+# Use it
+curl -s http://localhost:8449/api/arsys/v1/entry/HPD%3AHelp%20Desk \
+  -H "Authorization: AR-JWT $TOKEN"
+```
+</details>
+
+<details>
+<summary><b>Generic Entry API</b> — CRUD for any Remedy form</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/arsys/v1/entry/{formName}` | List entries (supports `q=` qualification, `fields=`, `limit`, `offset`, `sort`) |
+| GET | `/api/arsys/v1/entry/{formName}/{entryId}` | Get single entry |
+| POST | `/api/arsys/v1/entry/{formName}` | Create entry (returns Location header) |
+| PUT | `/api/arsys/v1/entry/{formName}/{entryId}` | Update entry |
+| DELETE | `/api/arsys/v1/entry/{formName}/{entryId}` | Delete entry |
+
+**Available forms:** `HPD:Help Desk`, `CHG:Infrastructure Change`, `AST:ComputerSystem`, `CTM:People`, `CTM:Support Group`, `WOI:WorkOrder`, `SLA:SLADefinition`
+
+**Qualification syntax:** `'Field' = "Value" AND 'Field' LIKE "%pattern%"`
+</details>
+
+<details>
+<summary><b>Incident Management</b> (HPD:Help Desk) — 8 seed incidents</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/arsys/v1/incident/stats` | Incident statistics (total, open, by priority/group) |
+| POST | `/api/arsys/v1/incident/{id}/assign` | Assign to group/person |
+| POST | `/api/arsys/v1/incident/{id}/resolve` | Resolve with resolution text |
+| POST | `/api/arsys/v1/incident/{id}/reopen` | Reopen resolved/closed incident |
+| POST | `/api/arsys/v1/incident/{id}/worknotes` | Add work note |
+
+**Seed incidents:** INC000000001–INC000000008 (Critical DB outage, VPN failures, PAM recording gap, unauthorized access, etc.)
+</details>
+
+<details>
+<summary><b>Change Management</b> (CHG:Infrastructure Change) — 5 seed changes</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/arsys/v1/change/schedule` | Change calendar |
+| POST | `/api/arsys/v1/change/{id}/approve` | CAB approval |
+| POST | `/api/arsys/v1/change/{id}/reject` | Reject with reason |
+| POST | `/api/arsys/v1/change/{id}/implement` | Start implementation |
+| POST | `/api/arsys/v1/change/{id}/complete` | Complete change |
+| GET | `/api/arsys/v1/change/{id}/tasks` | List change tasks |
+
+**Seed changes:** CRQ000000001–CRQ000000005 (Fudo upgrade, vuln patch, server onboarding, AD restructuring, firewall rules)
+</details>
+
+<details>
+<summary><b>CMDB, People, Work Orders, SLA, Webhooks</b></summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/arsys/v1/asset/topology` | Asset relationship topology |
+| GET | `/api/arsys/v1/asset/{id}/relationships` | CI relationships |
+| POST | `/api/arsys/v1/asset/{id}/relationships` | Create CI relationship |
+| GET | `/api/arsys/v1/people/groups` | List support groups |
+| GET | `/api/arsys/v1/people/groups/{id}/members` | Group members |
+| POST | `/api/arsys/v1/workorder/{id}/assign` | Assign work order |
+| POST | `/api/arsys/v1/workorder/{id}/complete` | Complete work order |
+| GET | `/api/arsys/v1/sla/definitions` | SLA definitions (P1–P4) |
+| GET | `/api/arsys/v1/sla/status/{incidentId}` | SLA status (time remaining, breach) |
+| POST/GET/DELETE | `/api/arsys/v1/webhook` | Webhook management |
+
+**CMDB:** 5 servers (DC01, DB-PROD, APP-ERP, FILE-SRV01, FUDO-PAM) matching SNOW + JSM
+**SLA:** P1: 15min/4h, P2: 1h/8h, P3: 4h/24h, P4: 8h/72h
+</details>
+
+---
+
 ## 🖥️ PAMlab Studio
 
 Web-based developer IDE at [http://localhost:3000](http://localhost:3000):
 
-- **📊 Dashboard** — Health status of all 5 APIs at a glance
-- **📋 Scenario Builder** — 12 predefined scenarios covering all systems
+- **📊 Dashboard** — Health status of all 6 APIs at a glance
+- **📋 Scenario Builder** — 16 predefined scenarios covering all systems
 - **📝 Code Editor** — Monaco Editor (VS Code engine) with PowerShell syntax highlighting
 - **▶️ Script Runner** — Execute scripts against mock APIs with real-time results
-- **🔍 API Explorer** — Browse 250+ endpoints, try them interactively
+- **🔍 API Explorer** — Browse 280+ endpoints, try them interactively
 - **⚡ Event Stream** — Real-time Fudo events via Server-Sent Events
 - **📊 Results Panel** — Step-by-step results + API traffic log
 
@@ -617,7 +719,10 @@ Web-based developer IDE at [http://localhost:3000](http://localhost:3000):
 | JSM Incident from PAM | Fudo, JSM | PAM alert → JSM incident → transition workflow |
 | JSM Approval Workflow | JSM, AD, Fudo | Access request → approval → provision → SLA check |
 | JSM ↔ CMDB Sync | JSM, SNOW | Compare JSM Assets with SNOW CMDB → reconciliation |
-| Audit Report | **All 5 systems** | Comprehensive compliance report |
+| Remedy Incident from PAM | Fudo, Remedy | PAM anomaly → Remedy incident → work notes → SLA check |
+| Remedy Change Workflow | Remedy, Fudo, AD | Change request → CAB approval → implement → complete |
+| Remedy CMDB Asset Audit | Remedy, SNOW, JSM | Cross-ITSM CMDB comparison & drift detection |
+| Audit Report | **All 6 systems** | Comprehensive compliance report |
 
 ---
 
@@ -636,6 +741,7 @@ Ready-to-use scripts in `examples/powershell/`:
 | `07-Audit-Report.ps1` | Cross-system compliance report | All |
 | `08-ServiceNow-Integration.ps1` | Incidents, changes, CMDB sync | SNOW, Fudo, AD |
 | `09-JSM-Integration.ps1` | JQL search, approvals, assets, SLA | JSM, Fudo, AD |
+| `10-Remedy-Integration.ps1` | Incidents, changes, CMDB, SLA, work orders | Remedy, Fudo, AD |
 
 ### Usage
 
@@ -667,7 +773,7 @@ Switch-PAMlabEnv -Environment production
 
 ## 🔗 Pipeline Engine (Port 8446)
 
-The Pipeline Engine orchestrates workflows across **all five mock APIs** using YAML-based pipeline definitions.
+The Pipeline Engine orchestrates workflows across **all six mock APIs** using YAML-based pipeline definitions.
 
 ```bash
 # Run a pipeline via CLI
@@ -696,7 +802,7 @@ curl -X POST http://localhost:8446/pipelines/run \
 |---------|-------------|
 | ⏰ **Timed Access** | Grant access for 4h, 8h, 30d — auto-revokes when expired |
 | 🔄 **Rollback** | If any step fails, all previous steps are automatically undone |
-| 🧩 **5 Connectors** | Fudo PAM, Matrix42, AD, ServiceNow, JSM |
+| 🧩 **6 Connectors** | Fudo PAM, Matrix42, AD, ServiceNow, JSM, Remedy |
 | 📋 **YAML Templates** | Pre-built workflows for common scenarios |
 | 🐛 **Step-by-Step Debug** | Pause after each step, inspect variables, continue |
 | 🏃 **Dry-run Mode** | Validate without executing |
@@ -763,10 +869,17 @@ PAMlab/
 │   ├── Dockerfile
 │   └── package.json
 │
+├── remedy-mock-api/            # 🏥 BMC Remedy / Helix Mock (30+ endpoints)
+│   ├── src/
+│   │   ├── routes/             #    entry, incident, change, asset, people, workorder, sla, webhook
+│   │   └── data/               #    8 incidents, 5 changes, 5 assets, 10 people, 3 work orders
+│   ├── Dockerfile
+│   └── package.json
+│
 ├── pipeline-engine/            # 🔗 Pipeline Engine (YAML workflows)
 │   ├── src/
 │   │   ├── engine/             #    PipelineRunner, StepExecutor, Rollback
-│   │   ├── connectors/         #    Fudo, Matrix42, AD, SNOW, JSM connectors
+│   │   ├── connectors/         #    Fudo, Matrix42, AD, SNOW, JSM, Remedy connectors
 │   │   ├── api.js              #    REST API (port 8446)
 │   │   └── cli.js              #    CLI runner
 │   ├── pipelines/              #    5 YAML pipeline templates
@@ -776,17 +889,17 @@ PAMlab/
 ├── pamlab-studio/              # 🖥️ Web Frontend (React + TypeScript + Vite)
 │   ├── src/
 │   │   ├── components/         #    Dashboard, Editor, Explorer, Scenarios
-│   │   ├── data/               #    250+ endpoint definitions
-│   │   └── services/           #    API clients, 13 predefined scenarios
+│   │   ├── data/               #    280+ endpoint definitions
+│   │   └── services/           #    API clients, 16 predefined scenarios
 │   └── Dockerfile
 │
 ├── examples/
-│   └── powershell/             # 📜 9 automation scripts + helper module
+│   └── powershell/             # 📜 10 automation scripts + helper module
 │       ├── config/             #    Environment configs (dev/prod)
 │       ├── _PAMlab-Module.psm1
 │       └── 01-09 scripts
 │
-├── docker-compose.yml          # 🐳 One command to run everything (7 services)
+├── docker-compose.yml          # 🐳 One command to run everything (8 services)
 ├── CONTRIBUTING.md             # 📖 How to contribute
 ├── SECURITY.md                 # 🔒 Security policy
 ├── DISCLAIMER.md               # ⚠️ Legal disclaimer
@@ -867,10 +980,18 @@ Security Alert    Fudo PAM        Active Directory    Matrix42 / SNOW / JSM
 | — | 🏢 **Active Directory Mock** (25+ endpoints) | ✅ Done |
 | [#3](https://github.com/BenediktSchackenberg/PAMlab/issues/3) | ❄️ **ServiceNow ITSM Mock** (30+ endpoints) | ✅ Done |
 | [#2](https://github.com/BenediktSchackenberg/PAMlab/issues/2) | 🎫 **Jira Service Management Mock** (30+ endpoints) | ✅ Done |
+| [#4](https://github.com/BenediktSchackenberg/PAMlab/issues/4) | 🏥 **BMC Remedy / Helix Mock** (30+ endpoints) | ✅ Done |
 | — | 🔗 **Pipeline Engine** (YAML workflows) | ✅ Done |
 | — | 🖥️ **PAMlab Studio** (Web IDE) | ✅ Done |
-| [#5](https://github.com/BenediktSchackenberg/PAMlab/issues/5) | 🔗 **Pipeline Engine v2** — SNOW/JSM connectors, conditional logic | 🚧 Next |
-| [#4](https://github.com/BenediktSchackenberg/PAMlab/issues/4) | 🏢 **BMC Remedy / Helix** — Incidents, changes, CMDB | 📋 Planned |
+| [#6](https://github.com/BenediktSchackenberg/PAMlab/issues/6) | 🔒 **CyberArk PAM Mock** — PVWA REST API, Safes, Accounts, PSM | 📋 Planned |
+| [#7](https://github.com/BenediktSchackenberg/PAMlab/issues/7) | 🔑 **HashiCorp Vault Mock** — Secrets, Dynamic Creds, PKI | 📋 Planned |
+| [#8](https://github.com/BenediktSchackenberg/PAMlab/issues/8) | ☁️ **Azure AD / Entra ID Mock** — Graph API, PIM, Conditional Access | 📋 Planned |
+| [#14](https://github.com/BenediktSchackenberg/PAMlab/issues/14) | 📧 **Microsoft 365 / Graph Mock** — Mail, Teams, Planner | 📋 Planned |
+| [#9](https://github.com/BenediktSchackenberg/PAMlab/issues/9) | 🧪 **E2E Test Suite** — Automated tests for all APIs | 📋 Planned |
+| [#10](https://github.com/BenediktSchackenberg/PAMlab/issues/10) | 🔗 **Pipeline Engine v2** — All connectors, conditional logic, loops | 📋 Planned |
+| [#11](https://github.com/BenediktSchackenberg/PAMlab/issues/11) | 🔄 **CI/CD + Docker Hub** — GitHub Actions, pre-built images | 📋 Planned |
+| [#12](https://github.com/BenediktSchackenberg/PAMlab/issues/12) | 🖥️ **PAMlab Studio v2** — Live dashboard, Python, CMDB diff | 📋 Planned |
+| [#13](https://github.com/BenediktSchackenberg/PAMlab/issues/13) | 🌐 **GitHub Pages Docs** — Full documentation site | 📋 Planned |
 
 > Want another ITSM system? [Open an issue!](https://github.com/BenediktSchackenberg/PAMlab/issues/new)
 
@@ -893,7 +1014,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## ⚠️ Disclaimer
 
-PAMlab is an **independent open-source project** for development and testing purposes only. It is **not affiliated with** Fudo Security, Matrix42 AG, Microsoft, ServiceNow, Inc., or Atlassian. See [DISCLAIMER.md](DISCLAIMER.md).
+PAMlab is an **independent open-source project** for development and testing purposes only. It is **not affiliated with** Fudo Security, Matrix42 AG, Microsoft, ServiceNow, Inc., Atlassian, or BMC Software. See [DISCLAIMER.md](DISCLAIMER.md).
 
 ---
 
