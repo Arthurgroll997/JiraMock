@@ -23,31 +23,31 @@
 
 ## 🎯 What is PAMlab?
 
-PAMlab is a **complete developer sandbox** for building and testing enterprise access management integrations. It simulates a real-world IT environment with three interconnected mock APIs:
+PAMlab is a **complete developer sandbox** for building and testing enterprise access management integrations. It simulates a real-world IT environment with **five interconnected mock APIs**, a pipeline engine, and a web-based IDE:
 
-| System | What it simulates | Port |
-|--------|-------------------|------|
-| 🔐 **Fudo PAM** | Privileged Access Management — session recording, password rotation, JIT access | `8443` |
-| 📋 **Matrix42 ESM** | Enterprise Service Management — asset management, ticketing, approval workflows | `8444` |
-| 🏢 **Active Directory** | Directory services — users, groups, OUs, computer objects | `8445` |
-| ❄️ **ServiceNow ITSM** | ITSM — incidents, changes, CMDB, service catalog | `8447` |
-| 🎫 **Jira Service Management** | ITSM — issues, workflows, approvals, assets, SLA | `8448` |
-| 🔗 **Pipeline Engine** | Modular action chain builder — orchestrates workflows across all systems | `8446` |
-| 🖥️ **PAMlab Studio** | Web-based IDE for building and testing integration scripts | `3000` |
+| System | What it simulates | Port | Endpoints |
+|--------|-------------------|------|-----------|
+| 🔐 **Fudo PAM** | Privileged Access Management — session recording, password rotation, JIT access | `8443` | 70+ |
+| 📋 **Matrix42 ESM** | Enterprise Service Management — asset management, ticketing, approval workflows | `8444` | 88 |
+| 🏢 **Active Directory** | Directory services — users, groups, OUs, computer objects | `8445` | 25+ |
+| ❄️ **ServiceNow ITSM** | ITSM — incidents, changes, CMDB, service catalog, events | `8447` | 30+ |
+| 🎫 **Jira Service Mgmt** | ITSM — issues, JQL search, workflow transitions, approvals, assets, SLA tracking | `8448` | 30+ |
+| 🔗 **Pipeline Engine** | Modular action chain builder — orchestrates workflows across all systems | `8446` | — |
+| 🖥️ **PAMlab Studio** | Web-based IDE for building and testing integration scripts | `3000` | — |
 
 ### The Problem
 
 You're an IT engineer who needs to automate access provisioning:
 
-> *"When a new employee is onboarded in Matrix42, they should automatically get the right server access in Fudo PAM based on their AD group membership."*
+> *"When a new employee is onboarded in Matrix42, they should automatically get the right server access in Fudo PAM based on their AD group membership — and ServiceNow needs a change request, while JSM tracks approvals."*
 
-But you can't test against production. Setting up dev instances of Fudo, Matrix42, and AD is expensive, complex, and time-consuming.
+But you can't test against production. Setting up dev instances of all these systems is expensive, complex, and time-consuming.
 
 ### The Solution
 
 ```bash
 docker-compose up
-# → 3 mock APIs + web IDE running in seconds
+# → 5 mock APIs + pipeline engine + web IDE running in seconds
 # → Build your integration scripts
 # → Test the complete workflow end-to-end
 # → Export scripts and deploy to production (just change the URLs)
@@ -70,83 +70,121 @@ cd PAMlab
 docker-compose up
 ```
 
-Open [http://localhost:3000](http://localhost:3000) for PAMlab Studio.
+This starts **all 7 services**. Open [http://localhost:3000](http://localhost:3000) for PAMlab Studio.
 
-### Option 2: Manual
+### Option 2: Manual (Run Each Service Individually)
 
 ```bash
 git clone https://github.com/BenediktSchackenberg/PAMlab.git
 cd PAMlab
 
-# Terminal 1: Fudo PAM Mock
+# Terminal 1: Fudo PAM Mock (port 8443)
 cd fudo-mock-api && npm install && npm start
 
-# Terminal 2: Matrix42 Mock
+# Terminal 2: Matrix42 Mock (port 8444)
 cd matrix42-mock-api && npm install && npm start
 
-# Terminal 3: Active Directory Mock
+# Terminal 3: Active Directory Mock (port 8445)
 cd ad-mock-api && npm install && npm start
 
-# Terminal 4: PAMlab Studio
+# Terminal 4: ServiceNow Mock (port 8447)
+cd servicenow-mock-api && npm install && npm start
+
+# Terminal 5: JSM Mock (port 8448)
+cd jsm-mock-api && npm install && npm start
+
+# Terminal 6: Pipeline Engine (port 8446)
+cd pipeline-engine && npm install && npm start
+
+# Terminal 7: PAMlab Studio (port 3000)
 cd pamlab-studio && npm install && npm run dev
 ```
 
-### Quick Test
+### Quick Test — Verify All Services
 
 ```bash
-# Fudo PAM — Login
+# ✅ Health checks (all should return JSON with status "ok" or "healthy")
+curl -s http://localhost:8443/health | jq .
+curl -s http://localhost:8444/health | jq .
+curl -s http://localhost:8445/health | jq .
+curl -s http://localhost:8447/health | jq .
+curl -s http://localhost:8448/health | jq .
+
+# 🔐 Fudo PAM — Login
 curl -X POST http://localhost:8443/api/v2/auth/login \
   -H "Content-Type: application/json" \
   -d '{"login":"admin","password":"admin123"}'
 
-# Matrix42 — Get token
+# 📋 Matrix42 — Get token
 curl -X POST http://localhost:8444/m42Services/api/ApiToken/GenerateAccessTokenFromApiToken/ \
   -H "Authorization: Bearer pamlab-dev-token" \
   -H "Content-Type: application/json"
 
-# Active Directory — Bind
+# 🏢 Active Directory — Bind
 curl -X POST http://localhost:8445/api/ad/auth/bind \
   -H "Content-Type: application/json" \
   -d '{"dn":"CN=admin","password":"admin"}'
+
+# ❄️ ServiceNow — List incidents
+curl -s http://localhost:8447/api/now/table/incident \
+  -H "Authorization: Bearer pamlab-dev-token" | jq '.result | length'
+
+# 🎫 JSM — Search with JQL
+curl -s -X POST http://localhost:8448/rest/api/2/search \
+  -H "Authorization: Bearer pamlab-dev-token" \
+  -H "Content-Type: application/json" \
+  -d '{"jql":"project = ITSM AND issuetype = Incident","maxResults":5}' | jq '.total'
 ```
+
+> **Default API token for all services:** `pamlab-dev-token`
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                     PAMlab Studio (:3000)                      │
-│          Scenario Builder • Code Editor • API Explorer         │
-└──────────┬───────────────────┬───────────────────┬───────────┘
-           │                   │                   │
-     ┌─────▼──────┐    ┌──────▼──────┐    ┌──────▼──────┐
-     │ Matrix42   │    │   Active    │    │  Fudo PAM   │
-     │ ESM Mock   │───►│  Directory  │───►│   Mock      │
-     │  (:8444)   │    │   Mock      │    │  (:8443)    │
-     │            │    │  (:8445)    │    │             │
-     │ • Assets   │    │ • Users     │    │ • Sessions  │
-     │ • Tickets  │    │ • Groups    │    │ • Accounts  │
-     │ • Approvals│    │ • OUs       │    │ • Safes     │
-     │ • Webhooks │    │ • Computers │    │ • Events    │
-     └────────────┘    └─────────────┘    └─────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          PAMlab Studio (:3000)                               │
+│      Dashboard • Scenario Builder • Code Editor • API Explorer • Events      │
+└────┬──────────┬──────────┬──────────┬──────────┬──────────┬─────────────────┘
+     │          │          │          │          │          │
+┌────▼────┐ ┌──▼────┐ ┌───▼───┐ ┌───▼─────┐ ┌─▼──────┐ ┌▼──────────┐
+│ Matrix42│ │Active │ │ Fudo  │ │ServiceNow│ │  JSM   │ │ Pipeline  │
+│  ESM    │ │Direct.│ │  PAM  │ │  ITSM   │ │        │ │  Engine   │
+│ (:8444) │ │(:8445)│ │(:8443)│ │ (:8447) │ │(:8448) │ │ (:8446)   │
+│         │ │       │ │       │ │         │ │        │ │           │
+│• Assets │ │• Users│ │• Sess.│ │• Incid. │ │• Issues│ │• YAML     │
+│• Tickets│ │• Group│ │• Accts│ │• Changes│ │• JQL   │ │• Rollback │
+│• Approv.│ │• OUs  │ │• Safes│ │• CMDB   │ │• SLA   │ │• Dry-run  │
+│• Provisi│ │• Comp.│ │• JIT  │ │• Catalog│ │• Assets│ │• 5 connec.│
+│• Webhook│ │• LDAP │ │• Events││• Events │ │• Approv│ │• Variables│
+└─────────┘ └───────┘ └───────┘ └─────────┘ └────────┘ └───────────┘
 ```
 
-### The Integration Flow
+### Shared Test Data (Consistent Across All Systems)
 
-```
-1. 📋 Matrix42: Access request created for new employee
-       │
-2. ✅ Matrix42: Manager approves the request
-       │
-3. 👤 Active Directory: User added to security group
-       │
-4. 🔄 Fudo PAM: AD sync picks up the group membership
-       │
-5. 🔐 Fudo PAM: User now has access to target servers
-       │
-6. 📹 Fudo PAM: All sessions are recorded and monitored
-```
+All mock APIs share the same **10 test users**, **5 servers**, and consistent identifiers:
+
+| User | Role | Present in |
+|------|------|-----------|
+| `admin` | System Administrator | All systems |
+| `j.doe` (John Doe) | IT Operations Lead | AD, Fudo, SNOW, JSM |
+| `a.smith` (Alice Smith) | Security Analyst | AD, Fudo, SNOW, JSM |
+| `b.wilson` (Bob Wilson) | Network Engineer | AD, Fudo, SNOW, JSM |
+| `c.jones` (Carol Jones) | Change Manager | AD, Fudo, SNOW, JSM |
+| `svc-integration` | Integration Service Account | AD, Fudo, SNOW |
+| `svc-fudo-sync` | Fudo AD Sync Account | AD, Fudo, SNOW |
+| `svc-matrix42` | Matrix42 Service Account | AD, Matrix42, SNOW |
+| `t.developer` (Tom Developer) | Developer | AD, JSM |
+| `l.leaving` (Lisa Leaving) | Departing Employee | AD, Fudo |
+
+| Server | IP | OS | In CMDB |
+|--------|----|----|---------|
+| DC01 | 10.0.1.10 | Windows Server 2022 | SNOW ✅ JSM ✅ |
+| DB-PROD | 10.0.1.20 | Ubuntu 22.04 | SNOW ✅ JSM ✅ |
+| APP-ERP | 10.0.1.30 | Windows Server 2022 | SNOW ✅ JSM ✅ |
+| FILE-SRV01 | 10.0.1.40 | Windows Server 2022 | SNOW ✅ JSM ✅ |
+| FUDO-PAM | 10.0.1.50 | Fudo OS 6.1 | SNOW ✅ JSM ✅ |
 
 ---
 
@@ -260,15 +298,11 @@ Simulates [Matrix42](https://www.matrix42.com/) Enterprise Service Management AP
 |--------|----------|-------------|
 | POST | `/m42Services/api/ApiToken/GenerateAccessTokenFromApiToken/` | Exchange API token for access token |
 | GET | `/m42Services/api/data/fragments/:ddName/:id` | Get fragment data |
-| GET | `/m42Services/api/data/fragments/:ddName/:id/schema-info` | Fragment + schema |
 | PUT | `/m42Services/api/data/fragments/:ddName/:id` | Update fragment |
 | POST | `/m42Services/api/data/fragments/:ddName` | Create fragment |
 | GET/POST/PUT/DELETE | `/m42Services/api/data/objects/:ddName/:id` | Object CRUD |
 | POST | `/m42Services/api/data/objects/query` | Query objects with filters |
 | GET | `/m42Services/api/meta/datadefinitions` | List data definitions |
-| GET | `/m42Services/api/meta/datadefinitions/:ddName` | Get DD schema |
-
-**Data Definitions:** SPSUserClassBase, SPSAssetClassBase, SPSSoftwareType, SPSActivityClassBase, SPSScCategoryClassBase
 </details>
 
 <details>
@@ -276,103 +310,33 @@ Simulates [Matrix42](https://www.matrix42.com/) Enterprise Service Management AP
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/m42Services/api/users` | List employees (filter by department, status, search) |
-| GET | `/m42Services/api/users/:id` | Get employee detail |
-| POST | `/m42Services/api/users` | Create employee |
-| PUT | `/m42Services/api/users/:id` | Update employee |
-| DELETE | `/m42Services/api/users/:id` | Deactivate employee |
-| GET | `/m42Services/api/users/:id/assets` | List assigned devices |
-| POST | `/m42Services/api/users/:id/assets` | Assign device to user |
-| DELETE | `/m42Services/api/users/:id/assets/:assetId` | Unassign device |
-| GET | `/m42Services/api/users/:id/groups` | List AD group memberships |
-| POST | `/m42Services/api/users/:id/groups` | Request group membership |
-| GET | `/m42Services/api/users/:id/tickets` | List user's tickets |
-| GET | `/m42Services/api/users/:id/software` | List installed software |
-| POST | `/m42Services/api/users/:id/onboard` | Trigger onboarding workflow |
-| POST | `/m42Services/api/users/:id/offboard` | Trigger offboarding workflow |
+| GET/POST | `/m42Services/api/users` | List / create employees |
+| GET/PUT/DELETE | `/m42Services/api/users/:id` | Employee CRUD |
+| GET/POST/DELETE | `/m42Services/api/users/:id/assets` | Device assignments |
+| GET/POST | `/m42Services/api/users/:id/groups` | AD group memberships |
+| GET | `/m42Services/api/users/:id/tickets` | User's tickets |
+| GET | `/m42Services/api/users/:id/software` | Installed software |
+| POST | `/m42Services/api/users/:id/onboard` | Trigger onboarding |
+| POST | `/m42Services/api/users/:id/offboard` | Trigger offboarding |
 | GET | `/m42Services/api/users/:id/access-history` | Access provisioning history |
 </details>
 
 <details>
-<summary><b>Assets / Devices</b> — 14 endpoints</summary>
+<summary><b>Assets, Tickets, Provisioning, Reports, Webhooks</b></summary>
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/m42Services/api/assets` | List assets (filter by type, status, location) |
-| GET | `/m42Services/api/assets/:id` | Get asset detail |
-| POST | `/m42Services/api/assets` | Register new asset |
-| PUT | `/m42Services/api/assets/:id` | Update asset |
-| DELETE | `/m42Services/api/assets/:id` | Retire asset |
-| GET | `/m42Services/api/assets/:id/software` | List installed software |
-| POST | `/m42Services/api/assets/:id/software` | Deploy software |
-| DELETE | `/m42Services/api/assets/:id/software/:softwareId` | Remove software |
-| GET | `/m42Services/api/assets/:id/user` | Get assigned user |
-| POST | `/m42Services/api/assets/:id/assign` | Assign to user |
-| POST | `/m42Services/api/assets/:id/unassign` | Unassign from user |
-| GET | `/m42Services/api/assets/:id/compliance` | Compliance status |
-| GET | `/m42Services/api/assets/:id/history` | Asset lifecycle history |
-</details>
-
-<details>
-<summary><b>Tickets / Service Desk</b> — 13 endpoints</summary>
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/m42Services/api/tickets` | List tickets (filter by status, priority, category) |
-| GET | `/m42Services/api/tickets/:id` | Get ticket detail |
-| POST | `/m42Services/api/tickets` | Create ticket |
-| PUT | `/m42Services/api/tickets/:id` | Update ticket |
-| DELETE | `/m42Services/api/tickets/:id` | Close/cancel ticket |
-| POST | `/m42Services/api/tickets/:id/assign` | Assign to agent |
-| POST | `/m42Services/api/tickets/:id/comment` | Add comment |
-| GET | `/m42Services/api/tickets/:id/comments` | List comments |
-| POST | `/m42Services/api/tickets/:id/resolve` | Resolve ticket |
-| POST | `/m42Services/api/tickets/:id/reopen` | Reopen ticket |
-| POST | `/m42Services/api/tickets/:id/escalate` | Escalate ticket |
-| GET | `/m42Services/api/tickets/stats` | Ticket statistics |
-</details>
-
-<details>
-<summary><b>Provisioning Workflows</b> — 9 endpoints (key for Fudo/AD integration)</summary>
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/m42Services/api/provisioning/workflows` | Create workflow (onboarding/offboarding/access-change) |
-| GET | `/m42Services/api/provisioning/workflows` | List workflows |
-| GET | `/m42Services/api/provisioning/workflows/:id` | Get workflow detail with steps |
-| POST | `/m42Services/api/provisioning/workflows/:id/execute` | Execute next step |
-| POST | `/m42Services/api/provisioning/workflows/:id/cancel` | Cancel workflow |
-| GET | `/m42Services/api/provisioning/workflows/:id/steps` | Get workflow steps |
-| POST | `/m42Services/api/provisioning/workflows/:id/steps/:stepId/complete` | Mark step complete |
-| POST | `/m42Services/api/provisioning/workflows/:id/steps/:stepId/fail` | Mark step failed |
-</details>
-
-<details>
-<summary><b>Software Catalog, Reports, Webhooks & Approvals</b></summary>
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/m42Services/api/software` | Software catalog |
-| GET | `/m42Services/api/software/:id` | Software detail |
-| GET | `/m42Services/api/software/:id/installations` | Where installed |
-| GET | `/m42Services/api/software/:id/licenses` | License info |
-| GET | `/m42Services/api/reports/inventory` | Asset inventory summary |
-| GET | `/m42Services/api/reports/compliance` | Compliance overview |
-| GET | `/m42Services/api/reports/licenses` | License usage |
-| GET | `/m42Services/api/reports/user-access` | User access matrix |
-| GET | `/m42Services/api/reports/provisioning` | Provisioning activity |
-| POST/GET/DELETE | `/m42Services/api/webhooks` | Webhook management |
-| POST/GET | `/m42Services/api/access-requests` | Approval workflow |
-| POST | `/m42Services/api/access-requests/:id/approve` | Approve |
-| POST | `/m42Services/api/access-requests/:id/deny` | Deny |
-| POST | `/m42Services/api/access-requests/:id/revoke` | Revoke |
+- **Assets (14 endpoints):** CRUD, software deployment, compliance, history
+- **Tickets (13 endpoints):** CRUD, assign, comment, resolve, escalate, stats
+- **Provisioning (9 endpoints):** Onboarding/offboarding/access-change workflows with rollback
+- **Reports (5 endpoints):** Inventory, compliance, licenses, user-access matrix, provisioning
+- **Webhooks (3 endpoints):** Register, list, delete
+- **Access Requests (4 endpoints):** Request → approve/deny → revoke
 </details>
 
 ---
 
 ### 🏢 Active Directory API (Port 8445)
 
-Simulates Active Directory with a REST interface:
+Simulates Active Directory with a REST interface — **25+ endpoints**:
 
 <details>
 <summary><b>All Endpoints</b></summary>
@@ -382,6 +346,8 @@ Simulates Active Directory with a REST interface:
 | POST | `/api/ad/auth/bind` | LDAP bind simulation |
 | GET/POST | `/api/ad/users` | List / create users |
 | GET/PUT/DELETE | `/api/ad/users/:sam` | User CRUD by sAMAccountName |
+| POST | `/api/ad/users/:sam/reset-password` | Reset user password |
+| POST | `/api/ad/users/:sam/disable` | Disable account |
 | GET/POST/DELETE | `/api/ad/users/:sam/groups` | User group memberships |
 | GET/POST | `/api/ad/groups` | List / create security groups |
 | GET/PUT/DELETE | `/api/ad/groups/:name` | Group CRUD |
@@ -395,16 +361,263 @@ Simulates Active Directory with a REST interface:
 
 ---
 
+### ❄️ ServiceNow ITSM API (Port 8447)
+
+Simulates the [ServiceNow](https://www.servicenow.com/) Table API and ITSM modules — **30+ endpoints**:
+
+<details>
+<summary><b>Table API</b> — Generic CRUD for any table</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/now/table/:tableName` | List records (supports `sysparm_query`, `sysparm_fields`, `sysparm_limit`, `sysparm_offset`) |
+| GET | `/api/now/table/:tableName/:sys_id` | Get single record |
+| POST | `/api/now/table/:tableName` | Create record |
+| PUT | `/api/now/table/:tableName/:sys_id` | Update record |
+| DELETE | `/api/now/table/:tableName/:sys_id` | Delete record |
+
+**Seeded tables:** `sys_user`, `sys_user_group`, `incident`, `change_request`, `cmdb_ci_server`, `cmdb_rel_ci`, `sc_request`, `sc_req_item`
+</details>
+
+<details>
+<summary><b>Incident Management</b></summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/now/table/incident` | List incidents (filter by priority, state, category) |
+| POST | `/api/now/table/incident` | Create incident |
+| GET | `/api/now/incident/stats` | Incident statistics (total, open, by priority/category) |
+
+**Seed data:** 6 incidents covering database outages, VPN failures, PAM alerts, password rotation issues
+</details>
+
+<details>
+<summary><b>Change Management</b></summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/now/table/change_request` | List change requests |
+| POST | `/api/now/table/change_request` | Create change request |
+| POST | `/api/now/change/approve/:sys_id` | Approve change (CAB) |
+| POST | `/api/now/change/implement/:sys_id` | Start implementation |
+| GET | `/api/now/change/schedule` | View change calendar |
+
+**Seed data:** 4 change requests — Fudo PAM upgrade, vulnerability patching, server onboarding, AD restructuring
+</details>
+
+<details>
+<summary><b>CMDB (Configuration Management)</b></summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/now/table/cmdb_ci_server` | List CI servers |
+| GET | `/api/now/cmdb/topology` | CMDB relationship topology (nodes + edges) |
+| GET | `/api/now/table/cmdb_rel_ci` | CI relationships |
+
+**Seed data:** 5 servers (DC01, DB-PROD, APP-ERP, FILE-SRV01, FUDO-PAM) with IPs and OS — matching JSM Assets
+</details>
+
+<details>
+<summary><b>Service Catalog</b></summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/now/catalog/items` | List catalog items |
+| GET | `/api/now/catalog/items/:sys_id` | Get item detail |
+| POST | `/api/now/catalog/items/:sys_id/order` | Order catalog item |
+| GET | `/api/now/table/sc_request` | List requests |
+| GET | `/api/now/table/sc_req_item` | List request items |
+
+**Catalog items:** Server Access, VPN Access, Software Installation, Account Creation
+</details>
+
+<details>
+<summary><b>Events & Webhooks</b></summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/now/events/register` | Register event webhook |
+| GET | `/api/now/events/list` | List registered webhooks |
+</details>
+
+---
+
+### 🎫 Jira Service Management API (Port 8448)
+
+Simulates [Atlassian JSM](https://www.atlassian.com/software/jira/service-management) with Jira REST API v2 + Service Desk API — **30+ endpoints**:
+
+<details>
+<summary><b>Authentication</b> — Session cookies + Bearer + Basic</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/rest/auth/1/session` | Login → returns JSESSIONID cookie |
+| DELETE | `/rest/auth/1/session` | Logout (invalidate session) |
+| GET | `/rest/auth/1/session/current` | Get current session info |
+
+Three auth methods: `Authorization: Bearer pamlab-dev-token`, Basic auth (any seeded user), or JSESSIONID cookie.
+</details>
+
+<details>
+<summary><b>Issues</b> — Full Jira REST API v2 CRUD</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/rest/api/2/issue/:issueIdOrKey` | Get issue by key (e.g. `ITSM-1`) or numeric ID |
+| POST | `/rest/api/2/issue` | Create issue |
+| PUT | `/rest/api/2/issue/:issueIdOrKey` | Update issue fields |
+| DELETE | `/rest/api/2/issue/:issueIdOrKey` | Delete issue |
+| GET | `/rest/api/2/issue/:issueIdOrKey/comment` | List comments |
+| POST | `/rest/api/2/issue/:issueIdOrKey/comment` | Add comment |
+| GET | `/rest/api/2/issue/:issueIdOrKey/worklog` | List worklogs |
+| POST | `/rest/api/2/issue/:issueIdOrKey/worklog` | Add worklog |
+
+**Projects:** ITSM (IT Service Management), SEC (Security)
+**Issue Types:** Incident, Service Request, Change, Problem, Task, Sub-task
+**Priorities:** Blocker, Critical, Major, Minor, Trivial
+
+**Seed data (13 issues):**
+| Key | Type | Priority | Summary |
+|-----|------|----------|---------|
+| ITSM-1 | Incident | Blocker | Database server unreachable |
+| ITSM-2 | Incident | Critical | VPN authentication failures |
+| ITSM-3 | Incident | Major | ERP application slow response |
+| ITSM-4 | Incident | Minor | Printer not responding Floor 2 |
+| ITSM-5 | Incident | Critical | Fudo PAM session recording gap |
+| ITSM-6 | Incident | Major | Password rotation failed for svc accounts |
+| ITSM-7 | Change | Critical | Upgrade Fudo PAM to v6.2 |
+| ITSM-8 | Change | Blocker | Patch critical vulnerability on DC01 |
+| ITSM-9 | Change | Major | Add new server to PAM monitoring |
+| ITSM-10 | Change | Critical | AD group restructuring for RBAC |
+| SEC-1 | Service Request | Major | Privileged access request for new engineer |
+| SEC-2 | Service Request | Blocker | Emergency access revocation |
+| SEC-3 | Service Request | Major | Password vault onboarding |
+</details>
+
+<details>
+<summary><b>JQL Search</b> — Query issues with Jira Query Language</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/rest/api/2/search` | Search with JQL (supports pagination) |
+
+**Supported JQL:**
+```sql
+-- Field comparisons
+project = ITSM
+issuetype = Incident
+priority = Blocker
+status = Open
+assignee = j.doe
+
+-- Combinators
+project = ITSM AND issuetype = Incident AND priority in (Blocker, Critical)
+
+-- Sorting
+ORDER BY created DESC
+ORDER BY priority ASC
+
+-- Pagination
+{"jql": "project = ITSM", "maxResults": 10, "startAt": 0}
+```
+</details>
+
+<details>
+<summary><b>Workflow Transitions</b> — Context-aware state machine</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/rest/api/2/issue/:issueIdOrKey/transitions` | Get **available** transitions (based on current status + issue type) |
+| POST | `/rest/api/2/issue/:issueIdOrKey/transitions` | Execute transition |
+
+**Workflows (only valid next states shown):**
+- **Incident:** Open → In Progress → Waiting for Customer → Resolved → Closed
+- **Service Request:** Open → Waiting for Approval → In Progress → Completed → Closed
+- **Change:** Open → Planning → Awaiting Approval → Implementing → Review → Closed
+</details>
+
+<details>
+<summary><b>Approvals</b> — Multi-level approval workflow</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/rest/servicedeskapi/request/:requestId/approval` | List approvals for request |
+| POST | `/rest/servicedeskapi/request/:requestId/approval` | Create approval (set approvers + required count) |
+| POST | `/rest/servicedeskapi/request/:requestId/approval/:approvalId/approve` | Approve |
+| POST | `/rest/servicedeskapi/request/:requestId/approval/:approvalId/decline` | Decline |
+
+Supports `required_count` — e.g. 2 approvers set, only 1 required = first approval completes it.
+</details>
+
+<details>
+<summary><b>Assets (Insight)</b> — CMDB for JSM</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/rest/assets/1.0/objectschema/list` | List asset schemas |
+| GET | `/rest/assets/1.0/objecttype/:schemaId` | List object types in schema |
+| GET | `/rest/assets/1.0/object/:objectId` | Get asset by ID |
+| POST | `/rest/assets/1.0/object/create` | Create asset |
+| PUT | `/rest/assets/1.0/object/:objectId` | Update asset |
+| GET | `/rest/assets/1.0/object/aql` | AQL search (e.g. `objectType=Server AND Name="DC01"`) |
+| GET | `/rest/assets/1.0/objecttype/:typeId/objects` | List objects by type |
+
+**Seed data:** "PAMlab Infrastructure" schema with Server, Network Device, Security Appliance types. 5 server objects matching ServiceNow CMDB.
+</details>
+
+<details>
+<summary><b>Queues, SLA, Customers, Webhooks</b></summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/rest/servicedeskapi/servicedesk/:id/queue` | List queues (All Open, My Assigned, Unassigned, SLA Breached, Security) |
+| GET | `/rest/servicedeskapi/servicedesk/:id/queue/:queueId/issue` | Get issues in queue |
+| GET | `/rest/servicedeskapi/request/:requestId/sla` | SLA tracking (time remaining, breach status, % elapsed) |
+| GET/POST | `/rest/servicedeskapi/customer` | List / create customers |
+| GET/POST | `/rest/servicedeskapi/organization` | List / create organizations |
+| GET | `/rest/servicedeskapi/organization/:orgId/user` | Org members |
+| POST/GET/DELETE | `/rest/api/2/webhook` | Webhook management |
+
+**SLA Policies:**
+| Priority | Response Time | Resolution Time |
+|----------|--------------|-----------------|
+| P1 (Blocker) | 1 hour | 4 hours |
+| P2 (Critical) | 4 hours | 8 hours |
+| P3 (Major) | 8 hours | 24 hours |
+| P4 (Minor) | 24 hours | 72 hours |
+</details>
+
+---
+
 ## 🖥️ PAMlab Studio
 
 Web-based developer IDE at [http://localhost:3000](http://localhost:3000):
 
-- **📋 Scenario Builder** — Select predefined scenarios or define your own
+- **📊 Dashboard** — Health status of all 5 APIs at a glance
+- **📋 Scenario Builder** — 12 predefined scenarios covering all systems
 - **📝 Code Editor** — Monaco Editor (VS Code engine) with PowerShell syntax highlighting
 - **▶️ Script Runner** — Execute scripts against mock APIs with real-time results
-- **🔍 API Explorer** — Browse all endpoints, try them interactively
+- **🔍 API Explorer** — Browse 250+ endpoints, try them interactively
 - **⚡ Event Stream** — Real-time Fudo events via Server-Sent Events
 - **📊 Results Panel** — Step-by-step results + API traffic log
+
+### Predefined Scenarios
+
+| Scenario | Systems | What it does |
+|----------|---------|-------------|
+| Onboarding | AD, Fudo, Matrix42 | Create user → add groups → PAM access → ESM ticket |
+| Offboarding | AD, Fudo, Matrix42 | Disable → revoke → delete → close ticket |
+| Role Change | AD, Fudo | Swap groups → update PAM access |
+| JIT Access | Fudo, Matrix42 | Time-limited access with approval |
+| Emergency Revoke | Fudo, AD | Kill sessions → lock account → revoke all |
+| Password Rotation | AD, Fudo | Rotate creds across systems |
+| SNOW Incident from PAM | Fudo, SNOW | PAM anomaly → auto-create ServiceNow incident |
+| SNOW Change for Rotation | SNOW, AD, Fudo | Change request → CAB → rotate → close |
+| CMDB Sync | SNOW, Fudo, AD | Sync infrastructure into CMDB |
+| JSM Incident from PAM | Fudo, JSM | PAM alert → JSM incident → transition workflow |
+| JSM Approval Workflow | JSM, AD, Fudo | Access request → approval → provision → SLA check |
+| JSM ↔ CMDB Sync | JSM, SNOW | Compare JSM Assets with SNOW CMDB → reconciliation |
+| Audit Report | **All 5 systems** | Comprehensive compliance report |
 
 ---
 
@@ -412,15 +625,17 @@ Web-based developer IDE at [http://localhost:3000](http://localhost:3000):
 
 Ready-to-use scripts in `examples/powershell/`:
 
-| Script | Scenario |
-|--------|----------|
-| `01-Onboarding.ps1` | New employee → access request → AD group → Fudo access |
-| `02-Offboarding.ps1` | Employee leaves → revoke all access → block → disable |
-| `03-Role-Change.ps1` | Department change → swap groups → verify new access |
-| `04-JIT-Access.ps1` | Temporary access with automatic expiry |
-| `05-Emergency-Revoke.ps1` | Security incident → terminate sessions → lock everything |
-| `06-Password-Rotation.ps1` | Trigger and verify password rotation policies |
-| `07-Audit-Report.ps1` | Generate comprehensive audit report |
+| Script | Scenario | Systems |
+|--------|----------|---------|
+| `01-Onboarding.ps1` | New employee provisioning | AD, Fudo, Matrix42 |
+| `02-Offboarding.ps1` | Employee departure — revoke all | AD, Fudo, Matrix42 |
+| `03-Role-Change.ps1` | Department change → swap groups | AD, Fudo |
+| `04-JIT-Access.ps1` | Temporary access with auto-expiry | Fudo, Matrix42 |
+| `05-Emergency-Revoke.ps1` | Security incident → terminate all | Fudo, AD |
+| `06-Password-Rotation.ps1` | Rotate service account creds | AD, Fudo |
+| `07-Audit-Report.ps1` | Cross-system compliance report | All |
+| `08-ServiceNow-Integration.ps1` | Incidents, changes, CMDB sync | SNOW, Fudo, AD |
+| `09-JSM-Integration.ps1` | JQL search, approvals, assets, SLA | JSM, Fudo, AD |
 
 ### Usage
 
@@ -450,204 +665,9 @@ Switch-PAMlabEnv -Environment production
 
 ---
 
-## 🧪 Predefined Test Scenarios
-
-### Onboarding Flow
-```
-Matrix42          Active Directory       Fudo PAM
-   │                     │                  │
-   │ Access Request      │                  │
-   ├────────────────►    │                  │
-   │                     │                  │
-   │ ✅ Approved         │                  │
-   ├─────────────────────┤                  │
-   │                     │ Add to Group     │
-   │                     ├─────────────────►│
-   │                     │                  │ Sync
-   │                     │                  ├───┐
-   │                     │                  │   │
-   │                     │                  │◄──┘
-   │                     │                  │
-   │                     │                  │ ✅ Access Granted
-```
-
-### Emergency Revoke Flow
-```
-Security Alert    Fudo PAM        Active Directory    Matrix42
-      │              │                  │                │
-      │ Anomaly!     │                  │                │
-      ├─────────────►│                  │                │
-      │              │ Kill Sessions    │                │
-      │              ├───┐              │                │
-      │              │◄──┘              │                │
-      │              │ Block User       │                │
-      │              ├───┐              │                │
-      │              │◄──┘              │                │
-      │              │                  │                │
-      │              ├─────────────────►│                │
-      │              │   Remove Groups  │                │
-      │              │                  ├───────────────►│
-      │              │                  │  🚨 Incident   │
-      │              │                  │     Ticket     │
-```
-
----
-
-## 📦 Project Structure
-
-```
-PAMlab/
-├── fudo-mock-api/              # 🔐 Fudo PAM API Mock (70+ endpoints)
-│   ├── src/
-│   │   ├── routes/             #    14 route files
-│   │   ├── data/               #    Seed data + in-memory store
-│   │   └── middleware/         #    Auth middleware
-│   ├── Dockerfile
-│   └── package.json
-│
-├── matrix42-mock-api/          # 📋 Matrix42 ESM API Mock
-│   ├── src/
-│   │   ├── routes/             #    5 route files
-│   │   └── data/               #    29 seed objects
-│   ├── Dockerfile
-│   └── package.json
-│
-├── ad-mock-api/                # 🏢 Active Directory API Mock
-│   ├── src/
-│   │   ├── routes/             #    7 route files
-│   │   └── data/               #    Users, groups, OUs, computers
-│   ├── Dockerfile
-│   └── package.json
-│
-├── pipeline-engine/            # 🔗 Pipeline Engine (YAML workflows)
-│   ├── src/
-│   │   ├── engine/             #    PipelineRunner, StepExecutor, Rollback
-│   │   ├── connectors/         #    Fudo, Matrix42, AD connectors
-│   │   ├── api.js              #    REST API (port 8446)
-│   │   └── cli.js              #    CLI runner
-│   ├── pipelines/              #    5 YAML pipeline templates
-│   ├── Dockerfile
-│   └── package.json
-│
-├── pamlab-studio/              # 🖥️ Web Frontend (React + TypeScript)
-│   ├── src/
-│   │   ├── components/         #    Dashboard, Editor, Explorer, etc.
-│   │   └── services/           #    API clients, script parser
-│   └── Dockerfile
-│
-├── examples/
-│   └── powershell/             # 📜 7 automation scripts + helper module
-│       ├── config/             #    Environment configs (dev/prod)
-│       ├── _PAMlab-Module.psm1
-│       └── 01-07 scripts
-│
-├── docker-compose.yml          # 🐳 One command to run everything
-├── CONTRIBUTING.md             # 📖 How to contribute
-├── SECURITY.md                 # 🔒 Security policy
-├── DISCLAIMER.md               # ⚠️ Legal disclaimer
-├── LICENSE                     # Apache 2.0
-└── README.md                   # You are here
-```
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting PRs.
-
-### Requirements
-
-- ✅ All commits must be **signed** (GPG or SSH)
-- ✅ All PRs require **code review** from a maintainer
-- ✅ Use **conventional commit** messages
-- ✅ Follow existing code style
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
----
-
-## 🔗 Pipeline Engine — Modular Action Chains
-
-> **The core concept:** PAMlab is not just mock APIs — it's a **modular pipeline builder** for enterprise access management.
-
-Every organization connects systems differently. PAMlab lets you **define, test, and debug** any combination:
-
-```yaml
-# Example: Onboarding with temporary server access
-name: "Temporary Admin Access (4 hours)"
-trigger:
-  source: matrix42          # or: jira, servicenow, remedy
-  event: access-request.created
-
-steps:
-  - name: "Wait for Approval"
-    system: matrix42
-    action: access-requests.approve
-    wait_for: manual
-
-  - name: "Add to AD Group (timed)"
-    system: active-directory
-    action: groups.add-member-timed
-    params:
-      group: "GRP-RDP-Admins"
-      user: "{{ trigger.user }}"
-      duration: "4h"              # ← Temporary! Auto-revokes after 4 hours
-
-  - name: "Sync Fudo PAM"
-    system: fudo-pam
-    action: user-directory.sync
-
-  - name: "Verify Access"
-    system: fudo-pam
-    action: groups.verify-member
-    assert: true
-
-  - name: "Create Audit Trail"
-    system: matrix42
-    action: tickets.create
-
-rollback:                         # ← If anything fails, undo everything
-  - system: active-directory
-    action: groups.remove-member
-  - system: matrix42
-    action: tickets.create-failure
-```
-
-### Mix and Match Any System
-
-```
-┌─── Frontends ───┐     ┌── Directory ──┐     ┌──── PAM ────┐
-│ Matrix42         │     │ Active Dir.   │     │ Fudo PAM    │
-│ Jira SM          │────►│ Azure AD      │────►│ CyberArk    │
-│ ServiceNow       │     │ LDAP          │     │ BeyondTrust │
-│ BMC Remedy       │     └───────────────┘     └─────────────┘
-└──────────────────┘           │
-                               ▼
-                    ┌── Execution ──────┐
-                    │ PowerShell        │
-                    │ Python            │
-                    │ Pipeline Engine   │
-                    └───────────────────┘
-```
-
-### Key Capabilities
-
-| Feature | Description |
-|---------|-------------|
-| ⏰ **Timed Access** | Grant access for 4h, 8h, 30d — auto-revokes when expired |
-| 🔄 **Rollback** | If any step fails, all previous steps are automatically undone |
-| 🧩 **Pluggable Connectors** | Add new systems without changing the engine |
-| 📋 **Pipeline Templates** | Pre-built workflows for common scenarios |
-| 🐛 **Step-by-Step Debug** | Pause after each step, inspect variables, continue |
-| 🔀 **Any Combination** | Matrix42→AD→Fudo, JSM→AzureAD→CyberArk, SNOW→AD→Fudo... |
-
-> See [Epic #5](https://github.com/BenediktSchackenberg/PAMlab/issues/5) for the full Pipeline Engine specification.
-
----
-
 ## 🔗 Pipeline Engine (Port 8446)
 
-The Pipeline Engine orchestrates workflows across all three mock APIs using YAML-based pipeline definitions.
+The Pipeline Engine orchestrates workflows across **all five mock APIs** using YAML-based pipeline definitions.
 
 ```bash
 # Run a pipeline via CLI
@@ -672,33 +692,208 @@ curl -X POST http://localhost:8446/pipelines/run \
 
 ### Key Features
 
-- **Variable interpolation** — `{{ trigger.user }}`, `{{ steps.step-name.result.id }}`
-- **Automatic rollback** — On failure, undo completed steps in reverse order
-- **Dry-run mode** — Validate without executing
-- **3 connectors** — Fudo PAM, Matrix42 ESM, Active Directory with auto-authentication
+| Feature | Description |
+|---------|-------------|
+| ⏰ **Timed Access** | Grant access for 4h, 8h, 30d — auto-revokes when expired |
+| 🔄 **Rollback** | If any step fails, all previous steps are automatically undone |
+| 🧩 **5 Connectors** | Fudo PAM, Matrix42, AD, ServiceNow, JSM |
+| 📋 **YAML Templates** | Pre-built workflows for common scenarios |
+| 🐛 **Step-by-Step Debug** | Pause after each step, inspect variables, continue |
+| 🏃 **Dry-run Mode** | Validate without executing |
+| 🔀 **Any Combination** | Matrix42→AD→Fudo, JSM→AD→Fudo, SNOW→AD→Fudo... |
 
-See [`pipeline-engine/README.md`](pipeline-engine/README.md) for full documentation.
+### Mix and Match Any System
+
+```
+┌─── Frontends ───┐     ┌── Directory ──┐     ┌──── PAM ────┐
+│ Matrix42 ESM    │     │ Active Dir.   │     │ Fudo PAM    │
+│ Jira SM         │────►│ Azure AD      │────►│ CyberArk    │
+│ ServiceNow      │     │ LDAP          │     │ BeyondTrust │
+│ BMC Remedy      │     └───────────────┘     └─────────────┘
+└─────────────────┘           │
+                              ▼
+                   ┌── Execution ──────┐
+                   │ PowerShell        │
+                   │ Python            │
+                   │ Pipeline Engine   │
+                   └───────────────────┘
+```
+
+> See [Epic #5](https://github.com/BenediktSchackenberg/PAMlab/issues/5) for the full Pipeline Engine specification.
+
+---
+
+## 📦 Project Structure
+
+```
+PAMlab/
+├── fudo-mock-api/              # 🔐 Fudo PAM API Mock (70+ endpoints)
+│   ├── src/
+│   │   ├── routes/             #    14 route files
+│   │   ├── data/               #    Seed data + in-memory store
+│   │   └── middleware/         #    Auth middleware
+│   ├── Dockerfile
+│   └── package.json
+│
+├── matrix42-mock-api/          # 📋 Matrix42 ESM API Mock (88 endpoints)
+│   ├── src/
+│   │   ├── routes/             #    5 route files
+│   │   └── data/               #    29 seed objects
+│   ├── Dockerfile
+│   └── package.json
+│
+├── ad-mock-api/                # 🏢 Active Directory API Mock (25+ endpoints)
+│   ├── src/
+│   │   ├── routes/             #    7 route files
+│   │   └── data/               #    Users, groups, OUs, computers
+│   ├── Dockerfile
+│   └── package.json
+│
+├── servicenow-mock-api/        # ❄️ ServiceNow ITSM Mock (30+ endpoints)
+│   ├── src/
+│   │   ├── routes/             #    table, incident, change, cmdb, catalog, events
+│   │   └── data/               #    8 seeded tables, 5 CMDB CIs
+│   ├── Dockerfile
+│   └── package.json
+│
+├── jsm-mock-api/               # 🎫 Jira Service Management Mock (30+ endpoints)
+│   ├── src/
+│   │   ├── routes/             #    issues, search, transitions, approvals, assets, queues, webhooks
+│   │   └── data/               #    13 issues, 5 assets, 3 orgs, SLA policies
+│   ├── Dockerfile
+│   └── package.json
+│
+├── pipeline-engine/            # 🔗 Pipeline Engine (YAML workflows)
+│   ├── src/
+│   │   ├── engine/             #    PipelineRunner, StepExecutor, Rollback
+│   │   ├── connectors/         #    Fudo, Matrix42, AD, SNOW, JSM connectors
+│   │   ├── api.js              #    REST API (port 8446)
+│   │   └── cli.js              #    CLI runner
+│   ├── pipelines/              #    5 YAML pipeline templates
+│   ├── Dockerfile
+│   └── package.json
+│
+├── pamlab-studio/              # 🖥️ Web Frontend (React + TypeScript + Vite)
+│   ├── src/
+│   │   ├── components/         #    Dashboard, Editor, Explorer, Scenarios
+│   │   ├── data/               #    250+ endpoint definitions
+│   │   └── services/           #    API clients, 13 predefined scenarios
+│   └── Dockerfile
+│
+├── examples/
+│   └── powershell/             # 📜 9 automation scripts + helper module
+│       ├── config/             #    Environment configs (dev/prod)
+│       ├── _PAMlab-Module.psm1
+│       └── 01-09 scripts
+│
+├── docker-compose.yml          # 🐳 One command to run everything (7 services)
+├── CONTRIBUTING.md             # 📖 How to contribute
+├── SECURITY.md                 # 🔒 Security policy
+├── DISCLAIMER.md               # ⚠️ Legal disclaimer
+├── LICENSE                     # Apache 2.0
+└── README.md                   # You are here
+```
+
+---
+
+## 🧪 Integration Flows
+
+### Onboarding Flow (Matrix42 → AD → Fudo)
+```
+Matrix42          Active Directory       Fudo PAM
+   │                     │                  │
+   │ Access Request      │                  │
+   ├────────────────►    │                  │
+   │                     │                  │
+   │ ✅ Approved         │                  │
+   ├─────────────────────┤                  │
+   │                     │ Add to Group     │
+   │                     ├─────────────────►│
+   │                     │                  │ Sync
+   │                     │                  ├───┐
+   │                     │                  │   │
+   │                     │                  │◄──┘
+   │                     │                  │
+   │                     │                  │ ✅ Access Granted
+```
+
+### Cross-ITSM Incident Flow (Fudo → ServiceNow + JSM)
+```
+Fudo PAM        ServiceNow          JSM
+   │                │                │
+   │ 🚨 Anomaly     │                │
+   ├───────────────►│                │
+   │                │ Create INC     │
+   │                ├───┐            │
+   │                │◄──┘            │
+   │                │                │
+   ├────────────────────────────────►│
+   │                │                │ Create ITSM-xx
+   │                │                ├───┐
+   │                │                │◄──┘
+   │                │                │
+   │                │◄──────────────►│
+   │                │  CMDB ↔ Assets │
+   │                │     Sync       │
+```
+
+### Emergency Revoke Flow
+```
+Security Alert    Fudo PAM        Active Directory    Matrix42 / SNOW / JSM
+      │              │                  │                      │
+      │ Anomaly!     │                  │                      │
+      ├─────────────►│                  │                      │
+      │              │ Kill Sessions    │                      │
+      │              ├───┐              │                      │
+      │              │◄──┘              │                      │
+      │              │ Block User       │                      │
+      │              ├───┐              │                      │
+      │              │◄──┘              │                      │
+      │              │                  │                      │
+      │              ├─────────────────►│                      │
+      │              │   Remove Groups  │                      │
+      │              │                  ├─────────────────────►│
+      │              │                  │  🚨 Incident Ticket  │
+```
 
 ---
 
 ## 🗺️ Roadmap
 
-PAMlab is growing! The Pipeline Engine and additional ITSM platforms:
-
-| Epic | Component | Description | Status |
-|------|-----------|-------------|--------|
-| [#5](https://github.com/BenediktSchackenberg/PAMlab/issues/5) | 🔗 **Pipeline Engine** | Modular action chain builder — the core of PAMlab | **Next Up** |
-| [#2](https://github.com/BenediktSchackenberg/PAMlab/issues/2) | 🎫 **Jira Service Management** | Atlassian JSM mock (incidents, approvals, assets) — Port `8448` | ✅ Done |
-| [#3](https://github.com/BenediktSchackenberg/PAMlab/issues/3) | 🔧 **ServiceNow** | Table API, CMDB, change management — Port `8447` | Planned |
-| [#4](https://github.com/BenediktSchackenberg/PAMlab/issues/4) | 🏢 **BMC Remedy / Helix** | Incidents, changes, CMDB — Port `8448` | Planned |
+| Epic | Component | Status |
+|------|-----------|--------|
+| — | 🔐 **Fudo PAM Mock** (70+ endpoints) | ✅ Done |
+| — | 📋 **Matrix42 ESM Mock** (88 endpoints) | ✅ Done |
+| — | 🏢 **Active Directory Mock** (25+ endpoints) | ✅ Done |
+| [#3](https://github.com/BenediktSchackenberg/PAMlab/issues/3) | ❄️ **ServiceNow ITSM Mock** (30+ endpoints) | ✅ Done |
+| [#2](https://github.com/BenediktSchackenberg/PAMlab/issues/2) | 🎫 **Jira Service Management Mock** (30+ endpoints) | ✅ Done |
+| — | 🔗 **Pipeline Engine** (YAML workflows) | ✅ Done |
+| — | 🖥️ **PAMlab Studio** (Web IDE) | ✅ Done |
+| [#5](https://github.com/BenediktSchackenberg/PAMlab/issues/5) | 🔗 **Pipeline Engine v2** — SNOW/JSM connectors, conditional logic | 🚧 Next |
+| [#4](https://github.com/BenediktSchackenberg/PAMlab/issues/4) | 🏢 **BMC Remedy / Helix** — Incidents, changes, CMDB | 📋 Planned |
 
 > Want another ITSM system? [Open an issue!](https://github.com/BenediktSchackenberg/PAMlab/issues/new)
 
 ---
 
+## 🤝 Contributing
+
+We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting PRs.
+
+### Requirements
+
+- ✅ All commits must be **signed** (GPG or SSH)
+- ✅ All PRs require **code review** from a maintainer
+- ✅ Use **conventional commit** messages
+- ✅ Follow existing code style
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+---
+
 ## ⚠️ Disclaimer
 
-PAMlab is an **independent open-source project** for development and testing purposes only. It is **not affiliated with** Fudo Security, Matrix42 AG, or Microsoft. See [DISCLAIMER.md](DISCLAIMER.md).
+PAMlab is an **independent open-source project** for development and testing purposes only. It is **not affiliated with** Fudo Security, Matrix42 AG, Microsoft, ServiceNow, Inc., or Atlassian. See [DISCLAIMER.md](DISCLAIMER.md).
 
 ---
 
