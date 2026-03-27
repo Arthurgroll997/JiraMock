@@ -77,6 +77,7 @@ services:
       - M42_URL=http://matrix42-mock:8444
       - AD_URL=http://ad-mock:8445
       - SNOW_URL=http://servicenow-mock:8447
+      - JSM_URL=http://jsm-mock:8448
     depends_on:
       fudo-mock:
         condition: service_healthy
@@ -86,9 +87,27 @@ services:
         condition: service_healthy
       servicenow-mock:
         condition: service_healthy
+      jsm-mock:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8446/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  jsm-mock:
+    build:
+      context: ./jsm-mock-api
+      dockerfile: Dockerfile
+    container_name: pamlab-jsm
+    ports:
+      - "8448:8448"
+    environment:
+      - PORT=8448
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8448/health"]
       interval: 30s
       timeout: 5s
       retries: 3

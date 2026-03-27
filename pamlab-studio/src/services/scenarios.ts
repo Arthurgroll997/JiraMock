@@ -355,51 +355,248 @@ Write-Host "Catalog request created: $($orderResult.result.number)"
 `,
   },
   {
+    id: 'jsm-incident-from-pam',
+    name: 'JSM Incident from PAM Alert',
+    description: 'Create a Jira Service Management incident from a Fudo PAM security alert, then transition through the workflow.',
+    systems: ['Fudo PAM', 'Jira Service Management'],
+    steps: [
+      'Check Fudo PAM for security events',
+      'Create JSM incident via REST API',
+      'Add investigation comment',
+      'Transition to In Progress',
+      'Search related incidents with JQL',
+    ],
+    template: `# JSM Incident from PAM Alert
+$fudoBase = "http://localhost:8443"
+$jsmBase = "http://localhost:8448"
+
+$auth = @{ Authorization = "Bearer pamlab-dev-token" }
+
+# Step 1: Check Fudo PAM events
+$events = Invoke-RestMethod -Uri "$fudoBase/api/v2/events" -Headers $auth -Method GET
+Write-Host "Found $($events.Count) PAM events"
+
+# Step 2: Create JSM Incident
+$issue = @{
+    fields = @{
+        project = @{ key = "ITSM" }
+        issuetype = @{ name = "Incident" }
+        summary = "PAM Alert: Suspicious session from svc-integration"
+        description = "Fudo PAM detected unusual session pattern. Multiple failed auth attempts followed by off-hours access."
+        priority = @{ name = "Critical" }
+        assignee = @{ name = "b.wilson" }
+    }
+}
+$result = Invoke-RestMethod -Uri "$jsmBase/rest/api/2/issue" -Headers $auth -Method POST -Body ($issue | ConvertTo-Json -Depth 4) -ContentType "application/json"
+$issueKey = $result.key
+Write-Host "Created: $issueKey"
+
+# Step 3: Add investigation comment
+$comment = @{ body = "Initial investigation: svc-integration accessed DB-PROD at 03:14 UTC from unexpected IP 10.0.5.99. Checking PAM session recordings." }
+Invoke-RestMethod -Uri "$jsmBase/rest/api/2/issue/$issueKey/comment" -Headers $auth -Method POST -Body ($comment | ConvertTo-Json) -ContentType "application/json"
+
+# Step 4: Transition to In Progress
+$transitions = Invoke-RestMethod -Uri "$jsmBase/rest/api/2/issue/$issueKey/transitions" -Headers $auth -Method GET
+$inProgressId = ($transitions.transitions | Where-Object { $_.name -eq "In Progress" }).id
+Invoke-RestMethod -Uri "$jsmBase/rest/api/2/issue/$issueKey/transitions" -Headers $auth -Method POST -Body (@{transition=@{id=$inProgressId}} | ConvertTo-Json -Depth 3) -ContentType "application/json"
+Write-Host "Transitioned to In Progress"
+
+# Step 5: Search related incidents
+$search = @{
+    jql = "project = ITSM AND issuetype = Incident AND priority in (Blocker, Critical) ORDER BY created DESC"
+    maxResults = 5
+}
+$results = Invoke-RestMethod -Uri "$jsmBase/rest/api/2/search" -Headers $auth -Method POST -Body ($search | ConvertTo-Json) -ContentType "application/json"
+Write-Host "Found $($results.total) critical incidents"
+`,
+  },
+  {
+    id: 'jsm-approval-workflow',
+    name: 'JSM Approval for Access Request',
+    description: 'Create a service request in JSM for privileged access, submit for approval, and process the approval workflow.',
+    systems: ['Jira Service Management', 'Active Directory', 'Fudo PAM'],
+    steps: [
+      'Create JSM service request for access',
+      'Create approval request',
+      'Approve the request',
+      'Create AD account',
+      'Grant Fudo PAM access',
+      'Close the request',
+    ],
+    template: `# JSM Approval Workflow for Access Request
+$jsmBase = "http://localhost:8448"
+$adBase = "http://localhost:8445"
+$fudoBase = "http://localhost:8443"
+
+$auth = @{ Authorization = "Bearer pamlab-dev-token" }
+
+# Step 1: Create Service Request
+$request = @{
+    fields = @{
+        project = @{ key = "SEC" }
+        issuetype = @{ name = "Service Request" }
+        summary = "Privileged access request: t.developer needs DB-PROD access"
+        description = "Tom Developer requires admin access to DB-PROD for database migration project. Duration: 30 days."
+        priority = @{ name = "Major" }
+    }
+}
+$result = Invoke-RestMethod -Uri "$jsmBase/rest/api/2/issue" -Headers $auth -Method POST -Body ($request | ConvertTo-Json -Depth 4) -ContentType "application/json"
+$reqKey = $result.key
+Write-Host "Created request: $reqKey"
+
+# Step 2: Create Approval
+$approval = @{
+    approvers = @("c.jones", "b.wilson")
+    required_count = 1
+}
+$approvalResult = Invoke-RestMethod -Uri "$jsmBase/rest/servicedeskapi/request/$reqKey/approval" -Headers $auth -Method POST -Body ($approval | ConvertTo-Json) -ContentType "application/json"
+$approvalId = $approvalResult.id
+Write-Host "Approval created: $approvalId"
+
+# Step 3: Approve
+Invoke-RestMethod -Uri "$jsmBase/rest/servicedeskapi/request/$reqKey/approval/$approvalId/approve" -Headers $auth -Method POST -ContentType "application/json"
+Write-Host "Request approved!"
+
+# Step 4: Add to AD group
+Invoke-RestMethod -Uri "$adBase/api/groups/db-admins/members" -Method POST -Body '{"username":"t.developer"}' -ContentType "application/json"
+
+# Step 5: Create Fudo PAM access
+$pamAccess = @{
+    user_id = 9
+    server_id = 2
+    justification = "Approved via $reqKey — DB migration project"
+}
+Invoke-RestMethod -Uri "$fudoBase/api/v2/access-requests" -Method POST -Body ($pamAccess | ConvertTo-Json) -ContentType "application/json"
+Write-Host "PAM access granted"
+
+# Step 6: Check SLA
+$sla = Invoke-RestMethod -Uri "$jsmBase/rest/servicedeskapi/request/$reqKey/sla" -Headers $auth -Method GET
+Write-Host "SLA status: $($sla.values[0].ongoingCycle.breached)"
+`,
+  },
+  {
+    id: 'jsm-asset-cmdb-sync',
+    name: 'JSM Assets ↔ CMDB Sync',
+    description: 'Compare JSM Assets inventory with ServiceNow CMDB, identify drift, and create reconciliation tickets.',
+    systems: ['Jira Service Management', 'ServiceNow ITSM'],
+    steps: [
+      'Fetch JSM asset schemas and objects',
+      'Fetch SNOW CMDB servers',
+      'Compare inventories',
+      'Create JSM ticket for discrepancies',
+    ],
+    template: `# JSM Assets ↔ SNOW CMDB Sync
+$jsmBase = "http://localhost:8448"
+$snowBase = "http://localhost:8447"
+
+$auth = @{ Authorization = "Bearer pamlab-dev-token" }
+
+# Step 1: List JSM asset schemas
+$schemas = Invoke-RestMethod -Uri "$jsmBase/rest/assets/1.0/objectschema/list" -Headers $auth -Method GET
+Write-Host "Asset schemas: $($schemas.objectSchemas.Count)"
+
+# Step 2: Get server objects from JSM
+$servers = Invoke-RestMethod -Uri "$jsmBase/rest/assets/1.0/object/aql?qlQuery=objectType%3DServer" -Headers $auth -Method GET
+Write-Host "JSM servers: $($servers.objectEntries.Count)"
+foreach ($s in $servers.objectEntries) {
+    Write-Host "  $($s.label) - $($s.objectType.name)"
+}
+
+# Step 3: Get SNOW CMDB servers
+$cmdb = Invoke-RestMethod -Uri "$snowBase/api/now/table/cmdb_ci_server?sysparm_fields=name,ip_address,os" -Headers $auth -Method GET
+Write-Host "SNOW CMDB servers: $($cmdb.result.Count)"
+foreach ($ci in $cmdb.result) {
+    Write-Host "  $($ci.name) - $($ci.ip_address) [$($ci.os)]"
+}
+
+# Step 4: Create reconciliation ticket if needed
+$issue = @{
+    fields = @{
+        project = @{ key = "ITSM" }
+        issuetype = @{ name = "Task" }
+        summary = "CMDB Reconciliation: Sync JSM Assets with ServiceNow"
+        description = "Automated drift detection found potential discrepancies between JSM Assets and SNOW CMDB. Review and reconcile."
+        priority = @{ name = "Minor" }
+        assignee = @{ name = "j.doe" }
+    }
+}
+Invoke-RestMethod -Uri "$jsmBase/rest/api/2/issue" -Headers $auth -Method POST -Body ($issue | ConvertTo-Json -Depth 4) -ContentType "application/json"
+Write-Host "Reconciliation ticket created"
+`,
+  },
+  {
     id: 'audit-report',
     name: 'Audit Report',
-    description: 'Gather data from all systems (including ServiceNow) for a compliance audit report.',
-    systems: ['Fudo PAM', 'Matrix42 ESM', 'Active Directory', 'ServiceNow ITSM'],
+    description: 'Gather data from all systems (including ServiceNow and JSM) for a comprehensive compliance audit report.',
+    systems: ['Fudo PAM', 'Matrix42 ESM', 'Active Directory', 'ServiceNow ITSM', 'Jira Service Management'],
     steps: [
       'Fetch all users from AD',
       'Fetch Fudo session logs',
       'Fetch ESM tickets',
       'Fetch SNOW incidents & changes',
       'Fetch CMDB inventory',
+      'Fetch JSM issues & SLA status',
+      'Search JSM for security incidents',
     ],
-    template: `# Audit Report Scenario
+    template: `# Comprehensive Audit Report
 $fudoBase = "http://localhost:8443"
 $matrixBase = "http://localhost:8444"
 $adBase = "http://localhost:8445"
 $snowBase = "http://localhost:8447"
+$jsmBase = "http://localhost:8448"
 
-$snowAuth = @{ Authorization = "Bearer pamlab-dev-token" }
+$auth = @{ Authorization = "Bearer pamlab-dev-token" }
 
 # Step 1: Get all AD users
-Invoke-RestMethod -Uri "$adBase/api/ad/users" -Headers @{Authorization="Bearer pamlab-dev-token"} -Method GET
+Invoke-RestMethod -Uri "$adBase/api/ad/users" -Headers $auth -Method GET
 
 # Step 2: Get Fudo session logs
-Invoke-RestMethod -Uri "$fudoBase/api/v2/sessions" -Headers @{Authorization="Bearer pamlab-dev-token"} -Method GET
+Invoke-RestMethod -Uri "$fudoBase/api/v2/sessions" -Headers $auth -Method GET
 
 # Step 3: Get all ESM tickets
-Invoke-RestMethod -Uri "$matrixBase/m42Services/api/tickets" -Headers @{Authorization="Bearer pamlab-dev-token"} -Method GET
+Invoke-RestMethod -Uri "$matrixBase/m42Services/api/tickets" -Headers $auth -Method GET
 
 # Step 4: Get Fudo users
-Invoke-RestMethod -Uri "$fudoBase/api/v2/users" -Headers @{Authorization="Bearer pamlab-dev-token"} -Method GET
+Invoke-RestMethod -Uri "$fudoBase/api/v2/users" -Headers $auth -Method GET
 
 # Step 5: Get AD groups
-Invoke-RestMethod -Uri "$adBase/api/ad/groups" -Headers @{Authorization="Bearer pamlab-dev-token"} -Method GET
+Invoke-RestMethod -Uri "$adBase/api/ad/groups" -Headers $auth -Method GET
 
 # Step 6: Get SNOW incidents (open)
-$incidents = Invoke-RestMethod -Uri "$snowBase/api/now/table/incident?sysparm_query=state!=7" -Headers $snowAuth -Method GET
-Write-Host "Open incidents: $($incidents.result.Count)"
+$incidents = Invoke-RestMethod -Uri "$snowBase/api/now/table/incident?sysparm_query=state!=7" -Headers $auth -Method GET
+Write-Host "Open SNOW incidents: $($incidents.result.Count)"
 
 # Step 7: Get SNOW change requests
-$changes = Invoke-RestMethod -Uri "$snowBase/api/now/table/change_request" -Headers $snowAuth -Method GET
-Write-Host "Change requests: $($changes.result.Count)"
+$changes = Invoke-RestMethod -Uri "$snowBase/api/now/table/change_request" -Headers $auth -Method GET
+Write-Host "SNOW change requests: $($changes.result.Count)"
 
 # Step 8: Get CMDB server inventory
-$cmdb = Invoke-RestMethod -Uri "$snowBase/api/now/table/cmdb_ci_server" -Headers $snowAuth -Method GET
+$cmdb = Invoke-RestMethod -Uri "$snowBase/api/now/table/cmdb_ci_server" -Headers $auth -Method GET
 Write-Host "CMDB servers: $($cmdb.result.Count)"
+
+# Step 9: Search all JSM incidents
+$jsmSearch = @{
+    jql = "project = ITSM AND issuetype = Incident ORDER BY priority ASC"
+    maxResults = 50
+}
+$jsmIncidents = Invoke-RestMethod -Uri "$jsmBase/rest/api/2/search" -Headers $auth -Method POST -Body ($jsmSearch | ConvertTo-Json) -ContentType "application/json"
+Write-Host "JSM incidents: $($jsmIncidents.total)"
+
+# Step 10: Search JSM security issues
+$secSearch = @{
+    jql = "project = SEC ORDER BY created DESC"
+    maxResults = 50
+}
+$secIssues = Invoke-RestMethod -Uri "$jsmBase/rest/api/2/search" -Headers $auth -Method POST -Body ($secSearch | ConvertTo-Json) -ContentType "application/json"
+Write-Host "Security requests: $($secIssues.total)"
+
+# Step 11: Get JSM asset inventory
+$assets = Invoke-RestMethod -Uri "$jsmBase/rest/assets/1.0/objectschema/list" -Headers $auth -Method GET
+Write-Host "Asset schemas: $($assets.objectSchemas.Count)"
+
+Write-Host "`n=== AUDIT SUMMARY ==="
+Write-Host "Systems checked: Fudo PAM, Matrix42 ESM, AD, ServiceNow, JSM"
+Write-Host "Report generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 `,
   },
 ];

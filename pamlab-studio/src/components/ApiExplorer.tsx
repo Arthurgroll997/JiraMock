@@ -12,6 +12,7 @@ export default function ApiExplorer() {
     'Matrix42 ESM': settings.matrixUrl,
     'Active Directory': settings.adUrl,
     'ServiceNow ITSM': settings.snowUrl,
+    'Jira Service Management': settings.jsmUrl,
   };
 
   const tryIt = async (apiName: string, method: string, path: string) => {

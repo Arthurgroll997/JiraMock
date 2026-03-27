@@ -31,6 +31,7 @@ PAMlab is a **complete developer sandbox** for building and testing enterprise a
 | 📋 **Matrix42 ESM** | Enterprise Service Management — asset management, ticketing, approval workflows | `8444` |
 | 🏢 **Active Directory** | Directory services — users, groups, OUs, computer objects | `8445` |
 | ❄️ **ServiceNow ITSM** | ITSM — incidents, changes, CMDB, service catalog | `8447` |
+| 🎫 **Jira Service Management** | ITSM — issues, workflows, approvals, assets, SLA | `8448` |
 | 🔗 **Pipeline Engine** | Modular action chain builder — orchestrates workflows across all systems | `8446` |
 | 🖥️ **PAMlab Studio** | Web-based IDE for building and testing integration scripts | `3000` |
 
@@ -687,7 +688,7 @@ PAMlab is growing! The Pipeline Engine and additional ITSM platforms:
 | Epic | Component | Description | Status |
 |------|-----------|-------------|--------|
 | [#5](https://github.com/BenediktSchackenberg/PAMlab/issues/5) | 🔗 **Pipeline Engine** | Modular action chain builder — the core of PAMlab | **Next Up** |
-| [#2](https://github.com/BenediktSchackenberg/PAMlab/issues/2) | 🎫 **Jira Service Management** | Atlassian JSM mock (incidents, approvals, assets) — Port `8446` | Planned |
+| [#2](https://github.com/BenediktSchackenberg/PAMlab/issues/2) | 🎫 **Jira Service Management** | Atlassian JSM mock (incidents, approvals, assets) — Port `8448` | ✅ Done |
 | [#3](https://github.com/BenediktSchackenberg/PAMlab/issues/3) | 🔧 **ServiceNow** | Table API, CMDB, change management — Port `8447` | Planned |
 | [#4](https://github.com/BenediktSchackenberg/PAMlab/issues/4) | 🏢 **BMC Remedy / Helix** | Incidents, changes, CMDB — Port `8448` | Planned |
 

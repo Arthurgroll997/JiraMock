@@ -84,4 +84,50 @@ export const apiEndpoints: ApiEndpointGroup[] = [
       { method: 'GET', path: '/api/now/events/list', description: 'List registered webhooks', exampleResponse: { result: [] } },
     ],
   },
+  {
+    api: 'Jira Service Management',
+    baseUrl: 'http://localhost:8448',
+    endpoints: [
+      { method: 'GET', path: '/health', description: 'Health check', exampleResponse: { status: 'ok', service: 'jsm-mock-api' } },
+      // Authentication
+      { method: 'POST', path: '/rest/auth/1/session', description: 'Login (returns JSESSIONID cookie)', parameters: [{ name: 'username', type: 'string', required: true, description: 'Username' }, { name: 'password', type: 'string', required: true, description: 'Password' }], exampleRequest: { username: 'admin', password: 'admin' }, exampleResponse: { session: { name: 'JSESSIONID', value: '...' } } },
+      { method: 'DELETE', path: '/rest/auth/1/session', description: 'Logout (invalidate session)' },
+      { method: 'GET', path: '/rest/auth/1/session/current', description: 'Get current session info' },
+      // Issues (Jira REST API v2)
+      { method: 'GET', path: '/rest/api/2/issue/{issueIdOrKey}', description: 'Get issue by ID or key (e.g. ITSM-1)', parameters: [{ name: 'issueIdOrKey', type: 'string', required: true, description: 'Issue ID or key' }], exampleResponse: { key: 'ITSM-1', fields: { summary: 'Database server unreachable', priority: { name: 'Blocker' } } } },
+      { method: 'POST', path: '/rest/api/2/issue', description: 'Create issue', parameters: [{ name: 'fields.project.key', type: 'string', required: true, description: 'Project key (ITSM or SEC)' }, { name: 'fields.issuetype.name', type: 'string', required: true, description: 'Issue type (Incident, Service Request, Change, Problem, Task)' }, { name: 'fields.summary', type: 'string', required: true, description: 'Summary' }, { name: 'fields.priority.name', type: 'string', required: false, description: 'Priority (Blocker, Critical, Major, Minor, Trivial)' }], exampleRequest: { fields: { project: { key: 'ITSM' }, issuetype: { name: 'Incident' }, summary: 'Fudo PAM anomaly detected', priority: { name: 'Critical' } } } },
+      { method: 'PUT', path: '/rest/api/2/issue/{issueIdOrKey}', description: 'Update issue', parameters: [{ name: 'issueIdOrKey', type: 'string', required: true, description: 'Issue key' }], exampleRequest: { fields: { assignee: { name: 'b.wilson' } } } },
+      { method: 'DELETE', path: '/rest/api/2/issue/{issueIdOrKey}', description: 'Delete issue', parameters: [{ name: 'issueIdOrKey', type: 'string', required: true, description: 'Issue key' }] },
+      // Comments
+      { method: 'GET', path: '/rest/api/2/issue/{issueIdOrKey}/comment', description: 'List issue comments', parameters: [{ name: 'issueIdOrKey', type: 'string', required: true, description: 'Issue key' }] },
+      { method: 'POST', path: '/rest/api/2/issue/{issueIdOrKey}/comment', description: 'Add comment to issue', parameters: [{ name: 'issueIdOrKey', type: 'string', required: true, description: 'Issue key' }, { name: 'body', type: 'string', required: true, description: 'Comment text' }], exampleRequest: { body: 'Investigating root cause' } },
+      // Transitions (Workflow)
+      { method: 'GET', path: '/rest/api/2/issue/{issueIdOrKey}/transitions', description: 'Get available transitions for issue', parameters: [{ name: 'issueIdOrKey', type: 'string', required: true, description: 'Issue key' }], exampleResponse: { transitions: [{ id: '2', name: 'In Progress' }] } },
+      { method: 'POST', path: '/rest/api/2/issue/{issueIdOrKey}/transitions', description: 'Execute transition (change status)', parameters: [{ name: 'issueIdOrKey', type: 'string', required: true, description: 'Issue key' }, { name: 'transition.id', type: 'string', required: true, description: 'Transition ID' }], exampleRequest: { transition: { id: '2' } } },
+      // Search (JQL)
+      { method: 'POST', path: '/rest/api/2/search', description: 'Search issues with JQL (supports project, issuetype, priority, status, assignee + AND/OR)', parameters: [{ name: 'jql', type: 'string', required: true, description: 'JQL query string' }, { name: 'maxResults', type: 'number', required: false, description: 'Max results (default 50)' }, { name: 'startAt', type: 'number', required: false, description: 'Start index' }], exampleRequest: { jql: 'project = ITSM AND issuetype = Incident AND priority = Blocker ORDER BY created DESC', maxResults: 10 } },
+      // Service Desk — Approvals
+      { method: 'GET', path: '/rest/servicedeskapi/request/{requestId}/approval', description: 'List approvals for service request', parameters: [{ name: 'requestId', type: 'string', required: true, description: 'Request issue key' }] },
+      { method: 'POST', path: '/rest/servicedeskapi/request/{requestId}/approval', description: 'Create approval request', parameters: [{ name: 'requestId', type: 'string', required: true, description: 'Request issue key' }, { name: 'approvers', type: 'string[]', required: true, description: 'List of approver usernames' }], exampleRequest: { approvers: ['c.jones', 'b.wilson'], required_count: 1 } },
+      { method: 'POST', path: '/rest/servicedeskapi/request/{requestId}/approval/{approvalId}/approve', description: 'Approve request', parameters: [{ name: 'requestId', type: 'string', required: true, description: 'Request issue key' }, { name: 'approvalId', type: 'string', required: true, description: 'Approval ID' }] },
+      { method: 'POST', path: '/rest/servicedeskapi/request/{requestId}/approval/{approvalId}/decline', description: 'Decline request', parameters: [{ name: 'requestId', type: 'string', required: true, description: 'Request issue key' }, { name: 'approvalId', type: 'string', required: true, description: 'Approval ID' }] },
+      // Assets
+      { method: 'GET', path: '/rest/assets/1.0/objectschema/list', description: 'List asset schemas', exampleResponse: { objectSchemas: [{ id: 1, name: 'PAMlab Infrastructure' }] } },
+      { method: 'GET', path: '/rest/assets/1.0/objecttype/{schemaId}', description: 'List object types in schema', parameters: [{ name: 'schemaId', type: 'number', required: true, description: 'Schema ID' }] },
+      { method: 'GET', path: '/rest/assets/1.0/object/{objectId}', description: 'Get asset object by ID', parameters: [{ name: 'objectId', type: 'number', required: true, description: 'Object ID' }] },
+      { method: 'GET', path: '/rest/assets/1.0/object/aql', description: 'Search assets with AQL (attribute=value)', parameters: [{ name: 'qlQuery', type: 'string', required: true, description: 'AQL query (e.g. Name="DC01")' }], exampleRequest: { qlQuery: 'objectType = Server AND Name = "DC01"' } },
+      // Customers & Organizations
+      { method: 'GET', path: '/rest/servicedeskapi/customer', description: 'List customers' },
+      { method: 'POST', path: '/rest/servicedeskapi/customer', description: 'Create customer', parameters: [{ name: 'displayName', type: 'string', required: true, description: 'Display name' }, { name: 'email', type: 'string', required: true, description: 'Email' }] },
+      { method: 'GET', path: '/rest/servicedeskapi/organization', description: 'List organizations', exampleResponse: { values: [{ id: 1, name: 'PAMlab Corp' }] } },
+      // Queues & SLA
+      { method: 'GET', path: '/rest/servicedeskapi/servicedesk/{serviceDeskId}/queue', description: 'List queues', parameters: [{ name: 'serviceDeskId', type: 'number', required: true, description: 'Service desk ID' }], exampleResponse: { values: [{ id: 1, name: 'All Open' }] } },
+      { method: 'GET', path: '/rest/servicedeskapi/servicedesk/{serviceDeskId}/queue/{queueId}/issue', description: 'Get issues in queue', parameters: [{ name: 'serviceDeskId', type: 'number', required: true, description: 'Service desk ID' }, { name: 'queueId', type: 'number', required: true, description: 'Queue ID' }] },
+      { method: 'GET', path: '/rest/servicedeskapi/request/{requestId}/sla', description: 'Get SLA info for request (time remaining, breach status)', parameters: [{ name: 'requestId', type: 'string', required: true, description: 'Request issue key' }], exampleResponse: { values: [{ name: 'Time to first response', completedCycles: [], ongoingCycle: { remainingTime: { millis: 3600000 }, breached: false } }] } },
+      // Webhooks
+      { method: 'POST', path: '/rest/api/2/webhook', description: 'Register webhook', parameters: [{ name: 'url', type: 'string', required: true, description: 'Callback URL' }, { name: 'events', type: 'string[]', required: true, description: 'Events to subscribe to' }], exampleRequest: { url: 'http://fudo-mock:8443/api/v2/events/webhook', events: ['jira:issue_created', 'jira:issue_updated'] } },
+      { method: 'GET', path: '/rest/api/2/webhook', description: 'List registered webhooks' },
+      { method: 'DELETE', path: '/rest/api/2/webhook/{webhookId}', description: 'Delete webhook', parameters: [{ name: 'webhookId', type: 'string', required: true, description: 'Webhook ID' }] },
+    ],
+  },
 ];

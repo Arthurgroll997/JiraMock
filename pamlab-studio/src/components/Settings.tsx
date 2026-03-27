@@ -22,6 +22,7 @@ export default function Settings() {
     { key: 'matrixUrl', label: 'Matrix42 ESM URL' },
     { key: 'adUrl', label: 'Active Directory URL' },
     { key: 'snowUrl', label: 'ServiceNow ITSM URL' },
+    { key: 'jsmUrl', label: 'Jira Service Mgmt URL' },
     { key: 'fudoUser', label: 'API Username' },
     { key: 'fudoPass', label: 'API Password', type: 'password' },
   ];
