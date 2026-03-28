@@ -20,6 +20,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'jsm-mock-api', timestamp: new Date().toISOString() });
 });
 
+app.post('/reset', (req, res) => {
+  seed();
+  res.json({ status: 'reset', service: 'jsm-mock-api' });
+});
+
 // Auth routes (public)
 app.use('/rest/auth/1/session', require('./routes/auth'));
 

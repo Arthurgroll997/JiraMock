@@ -23,6 +23,12 @@ app.use('/api/users', authMiddleware, require('./routes/users'));
 app.use('/api/groups', authMiddleware, require('./routes/groups'));
 
 // Health
+app.post('/reset', (req, res) => {
+  const store = require('./data/store');
+  store.reset();
+  res.json({ status: 'reset', service: 'ad-mock-api' });
+});
+
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'ad-mock-api', domain: 'corp.local' }));
 
 const PORT = process.env.PORT || 8445;

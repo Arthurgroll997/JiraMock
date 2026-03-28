@@ -1,8 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import type { Page, ApiResult, StepResultType } from '../types';
 import { parseScript } from '../services/scriptParser';
 import { apiFetch } from '../services/api';
+import { prepareTestRun, executeCleanup, trackCreatedResources, type CleanupPlan } from '../services/testRunner';
+import { loadProductionConfig } from '../services/productionConfig';
 
 export default function CodeEditor({ script, onScriptChange, onResults, onNavigate }: {
   script: string;
@@ -17,6 +19,52 @@ export default function CodeEditor({ script, onScriptChange, onResults, onNaviga
   const [saved, setSaved] = useState(false);
   const [localSteps, setLocalSteps] = useState<StepResultType[]>([]);
   const [showPanel, setShowPanel] = useState(false);
+  const [cleanupPlan, setCleanupPlan] = useState<CleanupPlan | null>(null);
+  const [cleanupLog, setCleanupLog] = useState<string[]>([]);
+  const [cleaningUp, setCleaningUp] = useState(false);
+
+  // ── Production Export ────────────────────────────────────────────
+  const handleExportProduction = useCallback(() => {
+    const configs = loadProductionConfig();
+    if (!configs) {
+      alert('Configure production systems in Settings → Production Config first');
+      return;
+    }
+    // Replace mock URLs with production URLs in the current script
+    const header = [
+      '# PAMlab Studio - Production Export',
+      `# Generated: ${new Date().toISOString()}`,
+      '#Requires -Version 5.1',
+      'Set-StrictMode -Version Latest',
+      '$ErrorActionPreference = "Stop"',
+      '',
+    ].join('\n');
+    const blob = new Blob([header + '\n' + script], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pamlab-production.ps1';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [script]);
+
+  // ── Global keyboard shortcut listeners ───────────────────────────
+  useEffect(() => {
+    const onRun = () => handleRun();
+    const onSave = () => handleSave();
+    const onExport = () => handleExport();
+    const onExportProd = () => handleExportProduction();
+    window.addEventListener('pamlab:run', onRun);
+    window.addEventListener('pamlab:save', onSave);
+    window.addEventListener('pamlab:export', onExport);
+    window.addEventListener('pamlab:export-production', onExportProd);
+    return () => {
+      window.removeEventListener('pamlab:run', onRun);
+      window.removeEventListener('pamlab:save', onSave);
+      window.removeEventListener('pamlab:export', onExport);
+      window.removeEventListener('pamlab:export-production', onExportProd);
+    };
+  });
 
   // ── Run: execute all steps ───────────────────────────────────────
   const handleRun = async () => {
@@ -71,6 +119,73 @@ export default function CodeEditor({ script, onScriptChange, onResults, onNaviga
       onResults([...steps], [...traffic]);
     }
     setRunning(false);
+  };
+
+  // ── Test Run: replace user data with random test data ─────────────
+  const handleTestRun = async () => {
+    setRunning(true);
+    setDebugMode(false);
+    setShowPanel(true);
+    setCleanupPlan(null);
+    setCleanupLog([]);
+
+    const { script: modifiedScript, cleanup } = prepareTestRun(script);
+    const calls = parseScript(modifiedScript);
+
+    if (calls.length === 0) {
+      const empty: StepResultType[] = [{
+        step: 1, description: 'No API calls found in script', success: false,
+        result: { method: '-', url: '-', status: 0, statusText: 'Parse Error', time: 0, error: 'Could not find Invoke-RestMethod calls.' },
+      }];
+      setLocalSteps(empty);
+      onResults(empty, []);
+      setRunning(false);
+      return;
+    }
+
+    const steps: StepResultType[] = [];
+    const traffic: ApiResult[] = [];
+
+    for (let i = 0; i < calls.length; i++) {
+      const call = calls[i];
+      try {
+        const res = await apiFetch(call.url, call.method, call.body);
+        const result: ApiResult = {
+          method: call.method, url: call.url, status: res.status, statusText: res.statusText,
+          time: res.time, requestBody: call.body, responseBody: res.data,
+        };
+        traffic.push(result);
+        steps.push({ step: i + 1, description: `${call.method} ${call.url}`, success: res.status >= 200 && res.status < 400, result });
+        // Track created resources for cleanup
+        if (res.status >= 200 && res.status < 400 && res.data) {
+          trackCreatedResources(call.url, call.method, res.data, cleanup);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const errResult: ApiResult = { method: call.method, url: call.url, status: 0, statusText: 'Network Error', time: 0, error: msg };
+        traffic.push(errResult);
+        steps.push({ step: i + 1, description: `${call.method} ${call.url}`, success: false, result: errResult });
+      }
+      setLocalSteps([...steps]);
+      onResults([...steps], [...traffic]);
+    }
+
+    setCleanupPlan(cleanup);
+    setRunning(false);
+  };
+
+  // ── Cleanup: remove test-created resources ───────────────────────
+  const handleCleanup = async () => {
+    if (!cleanupPlan) return;
+    setCleaningUp(true);
+    try {
+      const log = await executeCleanup(cleanupPlan, apiFetch);
+      setCleanupLog(log);
+      setCleanupPlan(null);
+    } catch (err) {
+      setCleanupLog([`Cleanup error: ${err instanceof Error ? err.message : String(err)}`]);
+    }
+    setCleaningUp(false);
   };
 
   // ── Debug: step-through mode ─────────────────────────────────────
@@ -167,6 +282,10 @@ export default function CodeEditor({ script, onScriptChange, onResults, onNaviga
               className="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded text-sm font-medium transition-colors">
               {running ? '⏳ Running...' : '▶️ Run'}
             </button>
+            <button onClick={handleTestRun} disabled={running}
+              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded text-sm font-medium transition-colors">
+              🧪 Test Run
+            </button>
             <button onClick={handleDebugStart} disabled={running}
               className="px-3 py-1.5 bg-yellow-600/80 hover:bg-yellow-600 disabled:opacity-50 text-white rounded text-sm transition-colors">
               🐛 Debug
@@ -178,6 +297,10 @@ export default function CodeEditor({ script, onScriptChange, onResults, onNaviga
             <button onClick={handleExport}
               className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition-colors">
               📤 Export
+            </button>
+            <button onClick={handleExportProduction}
+              className="px-3 py-1.5 bg-purple-600/80 hover:bg-purple-600 text-white rounded text-sm transition-colors">
+              🏭 Production
             </button>
           </>
         )}
@@ -212,6 +335,26 @@ export default function CodeEditor({ script, onScriptChange, onResults, onNaviga
               <button onClick={() => setShowPanel(false)} className="text-gray-500 hover:text-gray-300 text-xs">✕ Close</button>
             </div>
             <div className="p-3 space-y-2">
+              {/* Cleanup controls */}
+              {cleanupPlan && (
+                <div className="rounded-lg p-3 border border-purple-700 bg-purple-900/20">
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleCleanup} disabled={cleaningUp}
+                      className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded text-sm font-medium transition-colors">
+                      {cleaningUp ? '⏳ Cleaning...' : '🧹 Cleanup Test Data'}
+                    </button>
+                    <span className="text-xs text-gray-400">
+                      {cleanupPlan.adUsers.length} users, {cleanupPlan.adGroupMemberships.length} memberships, {cleanupPlan.fudoUsers.length} fudo users
+                    </span>
+                  </div>
+                </div>
+              )}
+              {cleanupLog.length > 0 && (
+                <div className="rounded-lg p-3 border border-blue-700 bg-blue-900/20 text-xs text-blue-300">
+                  <div className="font-medium mb-1">🧹 Cleanup Log:</div>
+                  {cleanupLog.map((l, i) => <div key={i}>• {l}</div>)}
+                </div>
+              )}
               {localSteps.map((s, i) => (
                 <div key={i} className={`rounded-lg p-3 border text-sm ${s.success ? 'border-green-800 bg-green-900/20' : 'border-red-800 bg-red-900/20'}`}>
                   <div className="flex items-center gap-2">

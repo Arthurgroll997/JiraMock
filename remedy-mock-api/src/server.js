@@ -21,6 +21,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'remedy-mock-api', timestamp: new Date().toISOString() });
 });
 
+app.post('/reset', (req, res) => {
+  seed();
+  res.json({ status: 'reset', service: 'remedy-mock-api' });
+});
+
 // JWT auth routes (public)
 app.use('/api/jwt', require('./routes/auth'));
 

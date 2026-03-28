@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Page, Workflow, WorkflowStep } from '../types';
 import { connectors, getConnector, getAction } from '../data/connectors';
 import { generateScript, generateTestScript } from '../services/workflowGenerator';
 import { workflowTemplates } from '../data/workflowTemplates';
+import FlowDiagram from './FlowDiagram';
 
 // ── Helpers ────────────────────────────────────────────────────────
 let _stepId = 0;
@@ -16,9 +17,11 @@ const defaultWorkflow: Workflow = {
 };
 
 // ── Component ──────────────────────────────────────────────────────
-export default function WorkflowWizard({ onNavigate, onLoadScript }: {
+export default function WorkflowWizard({ onNavigate, onLoadScript, initialTemplate, onTemplateConsumed }: {
   onNavigate: (p: Page) => void;
   onLoadScript: (s: string) => void;
+  initialTemplate?: number | null;
+  onTemplateConsumed?: () => void;
 }) {
   const [wizard, setWizard] = useState<'templates' | 'config' | 'steps' | 'review'>('templates');
   const [workflow, setWorkflow] = useState<Workflow>({ ...defaultWorkflow });
@@ -27,6 +30,14 @@ export default function WorkflowWizard({ onNavigate, onLoadScript }: {
   const [selectedAction, setSelectedAction] = useState('');
   const [stepParams, setStepParams] = useState<Record<string, string>>({});
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  // Auto-load template from Welcome screen
+  useEffect(() => {
+    if (initialTemplate != null && initialTemplate >= 0 && initialTemplate < workflowTemplates.length) {
+      loadTemplate(workflowTemplates[initialTemplate]);
+      onTemplateConsumed?.();
+    }
+  }, []);
 
   // ── Load template ────────────────────────────────────────────────
   const loadTemplate = (tpl: Workflow) => {
@@ -437,6 +448,17 @@ export default function WorkflowWizard({ onNavigate, onLoadScript }: {
                 </div>
               );
             })}
+          </div>
+
+          {/* Flow diagram */}
+          <div className="mb-6">
+            <FlowDiagram
+              steps={workflow.steps.map(s => ({
+                connectorId: s.connectorId,
+                label: s.label || getAction(s.connectorId, s.actionId)?.name || '',
+                status: 'pending' as const,
+              }))}
+            />
           </div>
 
           {/* Script preview */}

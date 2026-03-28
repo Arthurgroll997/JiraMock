@@ -41,6 +41,30 @@ app.use('/m42Services/api/reports', reportRoutes);
 app.use('/api/tickets', ticketRoutes);
 
 // Health
+app.post('/reset', (req, res) => {
+  delete require.cache[require.resolve('./data/seed')];
+  const freshSeed = require('./data/seed');
+  const store = require('./data/store');
+  store.objects = {
+    SPSUserClassBase: [...freshSeed.employees],
+    SPSAssetClassBase: [...freshSeed.assets],
+    SPSSoftwareType: [...freshSeed.software],
+    SPSActivityClassBase: [...freshSeed.tickets],
+    SPSScCategoryClassBase: [...freshSeed.categories],
+  };
+  store.webhooks = [];
+  store.accessRequests = [...freshSeed.accessRequests];
+  store.dataDefinitions = freshSeed.dataDefinitions;
+  store.assetAssignments = [...freshSeed.assetAssignments];
+  store.softwareInstallations = [...freshSeed.softwareInstallations];
+  store.ticketComments = [...freshSeed.ticketComments];
+  store.provisioningWorkflows = [...freshSeed.provisioningWorkflows];
+  store.workflowSteps = [...freshSeed.workflowSteps];
+  store.userGroupMappings = [...freshSeed.userGroupMappings];
+  store.assetCompliance = [...freshSeed.assetCompliance];
+  res.json({ status: 'reset', service: 'matrix42-mock-api' });
+});
+
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'matrix42-mock-api' }));
 
 // 404

@@ -8,6 +8,7 @@ const navItems: { id: Page; icon: string; label: string }[] = [
   { id: 'explorer', icon: '🔍', label: 'API Explorer' },
   { id: 'events', icon: '⚡', label: 'Event Stream' },
   { id: 'results', icon: '📊', label: 'Results' },
+  { id: 'history', icon: '📜', label: 'Run History' },
   { id: 'settings', icon: '⚙️', label: 'Settings' },
 ];
 

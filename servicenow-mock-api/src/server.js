@@ -21,6 +21,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'servicenow-mock-api', timestamp: new Date().toISOString() });
 });
 
+app.post('/reset', (req, res) => {
+  seed();
+  res.json({ status: 'reset', service: 'servicenow-mock-api' });
+});
+
 // Auth routes (public)
 app.use('/api/now/auth', require('./routes/auth'));
 

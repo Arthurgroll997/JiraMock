@@ -39,6 +39,22 @@ app.use('/api/v2/access-requests', authMiddleware, require('./routes/access-requ
 app.use('/api/v2/access-policies', authMiddleware, require('./routes/access-policies'));
 
 // Health check
+app.post('/reset', (req, res) => {
+  delete require.cache[require.resolve('./data/seed')];
+  const freshSeed = require('./data/seed');
+  const store = require('./data/store');
+  Object.keys(freshSeed).forEach(key => {
+    if (Array.isArray(store[key]) && Array.isArray(freshSeed[key])) {
+      store[key].length = 0;
+      store[key].push(...freshSeed[key]);
+    } else if (typeof freshSeed[key] === 'object' && freshSeed[key] !== null && !Array.isArray(freshSeed[key])) {
+      store[key] = { ...freshSeed[key] };
+    }
+  });
+  store.tokens = new Map();
+  res.json({ status: 'reset', service: 'fudo-mock-api' });
+});
+
 app.get('/api/v2/health', (req, res) => res.json({ status: 'ok', version: '2.0.0-mock' }));
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'fudo-mock-api', version: '2.0.0-mock' }));
 

@@ -82,6 +82,6 @@ export interface AppSettings {
   exportFormat: 'powershell' | 'python';
 }
 
-export type Page = 'dashboard' | 'scenarios' | 'workflow' | 'editor' | 'explorer' | 'events' | 'results' | 'settings';
+export type Page = 'dashboard' | 'scenarios' | 'workflow' | 'editor' | 'explorer' | 'events' | 'results' | 'settings' | 'welcome' | 'history';
 
 export type { Connector, ConnectorAction, ActionParam, WorkflowStep, Workflow } from './workflow';

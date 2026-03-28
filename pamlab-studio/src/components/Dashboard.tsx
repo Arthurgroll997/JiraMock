@@ -1,10 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { HealthStatus, Page } from '../types';
-import { checkHealth, getSettings } from '../services/api';
+import { checkHealth, getSettings, apiFetch } from '../services/api';
 import ApiStatusCard from './ApiStatusCard';
 
 export default function Dashboard({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const [statuses, setStatuses] = useState<HealthStatus[]>([]);
+  const [resetting, setResetting] = useState(false);
+  const [resetMsg, setResetMsg] = useState('');
+  const [stats, setStats] = useState<{ label: string; value: string; icon: string }[]>([
+    { label: 'Users', value: '—', icon: '👥' },
+    { label: 'Servers', value: '—', icon: '🖥️' },
+    { label: 'Groups', value: '—', icon: '📁' },
+    { label: 'Sessions', value: '—', icon: '🔗' },
+    { label: 'Pending', value: '—', icon: '⏳' },
+  ]);
   const settings = getSettings();
 
   const apis = [
@@ -26,18 +35,42 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: Page) => voi
     setStatuses(results);
   }, []);
 
+  const fetchStats = useCallback(async () => {
+    const base = settings.fudoUrl;
+    const fetches = [
+      { label: 'Users', icon: '👥', url: `${base}/api/v2/users` },
+      { label: 'Servers', icon: '🖥️', url: `${base}/api/v2/servers` },
+      { label: 'Groups', icon: '📁', url: `${base}/api/v2/groups` },
+      { label: 'Sessions', icon: '🔗', url: `${base}/api/v2/sessions` },
+      { label: 'Pending', icon: '⏳', url: `${base}/api/v2/access-requests?status=pending` },
+    ];
+    const results = await Promise.all(
+      fetches.map(async (f) => {
+        try {
+          const res = await fetch(f.url);
+          if (!res.ok) return { ...f, value: '—' };
+          const data = await res.json();
+          const count = data.total ?? data.length ?? (Array.isArray(data) ? data.length : '—');
+          return { ...f, value: String(count) };
+        } catch {
+          return { ...f, value: '—' };
+        }
+      })
+    );
+    setStats(results.map(r => ({ label: r.label, value: r.value, icon: r.icon })));
+  }, []);
+
   useEffect(() => {
     pollHealth();
+    fetchStats();
     const i = setInterval(pollHealth, 10000);
     return () => clearInterval(i);
-  }, [pollHealth]);
+  }, [pollHealth, fetchStats]);
 
-  const stats = [
-    { label: 'Users', value: '—', icon: '👥' },
-    { label: 'Servers', value: '—', icon: '🖥️' },
-    { label: 'Groups', value: '—', icon: '📁' },
-    { label: 'Sessions', value: '—', icon: '🔗' },
-    { label: 'Pending', value: '—', icon: '⏳' },
+  const quickActions = [
+    { icon: '▶️', title: 'Run Onboarding Demo', desc: 'Test the full onboarding flow', template: 0, color: 'from-blue-600/20 to-blue-700/10 border-blue-600/30 hover:border-blue-500' },
+    { icon: '🚨', title: 'Emergency Revoke Demo', desc: 'Block a compromised account in seconds', template: 3, color: 'from-red-600/20 to-red-700/10 border-red-600/30 hover:border-red-500' },
+    { icon: '🔧', title: 'Custom Workflow', desc: 'Start from scratch or pick a template', template: -1, color: 'from-purple-600/20 to-purple-700/10 border-purple-600/30 hover:border-purple-500' },
   ];
 
   return (
@@ -60,19 +93,46 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: Page) => voi
         ))}
       </div>
 
-      <div className="flex gap-3">
-        <button onClick={() => onNavigate('workflow')} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
-          🔧 Build Workflow
+      {/* Quick Actions */}
+      <h3 className="text-lg font-semibold text-gray-200 mb-4">Quick Actions</h3>
+      <div className="grid grid-cols-3 gap-4">
+        {quickActions.map((qa) => (
+          <button
+            key={qa.title}
+            onClick={() => onNavigate('workflow')}
+            className={`text-left p-5 rounded-xl border bg-gradient-to-br ${qa.color} transition-colors`}
+          >
+            <div className="text-2xl mb-2">{qa.icon}</div>
+            <div className="text-base font-semibold text-gray-100">{qa.title}</div>
+            <div className="text-sm text-gray-400 mt-1">{qa.desc}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Reset Mock Data */}
+      <div className="mt-6 flex items-center gap-3">
+        <button
+          onClick={async () => {
+            setResetting(true);
+            setResetMsg('');
+            const resetUrls = [
+              '/api/fudo/reset', '/api/matrix42/reset', '/api/ad/reset',
+              '/api/snow/reset', '/api/jsm/reset', '/api/remedy/reset',
+            ];
+            const resetResults = await Promise.allSettled(
+              resetUrls.map(url => apiFetch(url, 'POST'))
+            );
+            const ok = resetResults.filter(r => r.status === 'fulfilled' && (r.value as { status: number }).status === 200).length;
+            setResetMsg(`Reset ${ok}/${resetUrls.length} services`);
+            setResetting(false);
+            setTimeout(() => setResetMsg(''), 3000);
+          }}
+          disabled={resetting}
+          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          {resetting ? '⏳ Resetting...' : '🔄 Reset Mock Data'}
         </button>
-        <button onClick={() => onNavigate('scenarios')} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">
-          📋 Scenarios
-        </button>
-        <button onClick={() => onNavigate('explorer')} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">
-          🔍 API Explorer
-        </button>
-        <button onClick={() => onNavigate('editor')} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors">
-          📝 Run Script
-        </button>
+        {resetMsg && <span className="text-sm text-green-400">{resetMsg}</span>}
       </div>
     </div>
   );
