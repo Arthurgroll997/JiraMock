@@ -39,6 +39,7 @@ app.use('/api/v2/access-requests', authMiddleware, require('./routes/access-requ
 
 // Health check
 app.get('/api/v2/health', (req, res) => res.json({ status: 'ok', version: '2.0.0-mock' }));
+app.get('/health', (req, res) => res.json({ status: 'ok', service: 'fudo-mock-api', version: '2.0.0-mock' }));
 
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Not Found', message: `Route ${req.method} ${req.path} not found` }));

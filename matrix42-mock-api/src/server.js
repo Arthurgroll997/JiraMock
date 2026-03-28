@@ -37,6 +37,9 @@ app.use('/m42Services/api/software', softwareRoutes);
 app.use('/m42Services/api/provisioning', provisioningRoutes);
 app.use('/m42Services/api/reports', reportRoutes);
 
+// Alias routes (without /m42Services/ prefix) for convenience
+app.use('/api/tickets', ticketRoutes);
+
 // Health
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'matrix42-mock-api' }));
 

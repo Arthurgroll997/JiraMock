@@ -31,3 +31,5 @@ coverage/
 
 # Docker
 .docker/
+video-assets/node_modules/
+video-assets/package*.json

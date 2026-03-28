@@ -20,28 +20,29 @@ $adBase = "http://localhost:8445"
 
 # Step 1: Create AD User
 $adUser = @{
-  username = "jdoe"
-  firstName = "John"
-  lastName = "Doe"
-  email = "jdoe@corp.local"
+  sAMAccountName = "m.mueller"
+  cn = "Max Mueller"
+  givenName = "Max"
+  sn = "Mueller"
   department = "Engineering"
 }
 Invoke-RestMethod -Uri "$adBase/api/users" -Method POST -Body ($adUser | ConvertTo-Json) -ContentType "application/json"
 
-# Step 2: Add to Groups
-Invoke-RestMethod -Uri "$adBase/api/groups/engineers/members" -Method POST -Body '{"username":"jdoe"}' -ContentType "application/json"
+# Step 2: Add to Security Group
+Invoke-RestMethod -Uri "$adBase/api/groups/GRP-VPN-Users/members" -Method POST -Body '{"members":["m.mueller"]}' -ContentType "application/json"
 
 # Step 3: Create Fudo PAM User
 $pamUser = @{
-  name = "jdoe"
-  email = "jdoe@corp.local"
+  login = "max.mueller"
+  name = "Max Mueller"
+  email = "m.mueller@corp.local"
 }
 Invoke-RestMethod -Uri "$fudoBase/api/v2/users" -Method POST -Body ($pamUser | ConvertTo-Json) -ContentType "application/json"
 
 # Step 4: Create Access Request
 $request = @{
-  user_id = 1
-  server_id = 1
+  user_id = "1"
+  safe_id = "1"
   justification = "New employee onboarding"
 }
 Invoke-RestMethod -Uri "$fudoBase/api/v2/access-requests" -Method POST -Body ($request | ConvertTo-Json) -ContentType "application/json"
@@ -221,7 +222,7 @@ $snowAuth = @{ Authorization = "Bearer pamlab-dev-token" }
 
 # Step 1: Check Fudo PAM events for anomalies
 $events = Invoke-RestMethod -Uri "$fudoBase/api/v2/events" -Headers $fudoAuth -Method GET
-Write-Host "Found $($events.Count) events"
+Write-Host "Found \$($events.Count) events"
 
 # Step 2: Create ServiceNow Incident
 $incident = @{
@@ -235,15 +236,15 @@ $incident = @{
     caller_id = "svc-fudo-sync"
 }
 $result = Invoke-RestMethod -Uri "$snowBase/api/now/table/incident" -Headers $snowAuth -Method POST -Body ($incident | ConvertTo-Json) -ContentType "application/json"
-Write-Host "Created incident: $($result.result.number)"
+Write-Host "Created incident: \$($result.result.number)"
 
 # Step 3: Query CMDB for affected server
 $cmdb = Invoke-RestMethod -Uri "$snowBase/api/now/table/cmdb_ci_server?sysparm_query=name=FUDO-PAM" -Headers $snowAuth -Method GET
-Write-Host "CMDB CI: $($cmdb.result[0].name) ($($cmdb.result[0].ip_address))"
+Write-Host "CMDB CI: \$($cmdb.result[0].name) (\$($cmdb.result[0].ip_address))"
 
 # Step 4: Get incident stats
 $stats = Invoke-RestMethod -Uri "$snowBase/api/now/incident/stats" -Headers $snowAuth -Method GET
-Write-Host "Total open incidents: $($stats.result.total)"
+Write-Host "Total open incidents: \$($stats.result.total)"
 `,
   },
   {
@@ -276,7 +277,7 @@ $change = @{
 }
 $result = Invoke-RestMethod -Uri "$snowBase/api/now/table/change_request" -Headers $snowAuth -Method POST -Body ($change | ConvertTo-Json) -ContentType "application/json"
 $chgSysId = $result.result.sys_id
-Write-Host "Created change: $($result.result.number)"
+Write-Host "Created change: \$($result.result.number)"
 
 # Step 2: CAB Approval
 $approval = Invoke-RestMethod -Uri "$snowBase/api/now/change/approve/$chgSysId" -Headers $snowAuth -Method POST -Body '{"approval_notes":"Standard rotation - auto-approved"}' -ContentType "application/json"
@@ -286,7 +287,7 @@ Write-Host "Change approved"
 Invoke-RestMethod -Uri "$snowBase/api/now/change/implement/$chgSysId" -Headers $snowAuth -Method POST -ContentType "application/json"
 
 # Step 4: Rotate AD password
-$newPass = "RotatedPass_$(Get-Date -Format 'yyyyMMdd')!"
+$newPass = "RotatedPass_\$(Get-Date -Format 'yyyyMMdd')!"
 Invoke-RestMethod -Uri "$adBase/api/ad/users/svc-integration/reset-password" -Method POST -Body (@{newPassword=$newPass} | ConvertTo-Json) -ContentType "application/json"
 Write-Host "AD password rotated"
 
@@ -296,7 +297,7 @@ Write-Host "Fudo credentials updated"
 
 # Step 6: Check change schedule
 $schedule = Invoke-RestMethod -Uri "$snowBase/api/now/change/schedule" -Headers $snowAuth -Method GET
-Write-Host "Upcoming changes: $($schedule.result.Count)"
+Write-Host "Upcoming changes: \$($schedule.result.Count)"
 `,
   },
   {
@@ -320,22 +321,22 @@ $snowAuth = @{ Authorization = "Bearer pamlab-dev-token" }
 
 # Step 1: Get Fudo PAM managed servers
 $pamServers = Invoke-RestMethod -Uri "$fudoBase/api/v2/servers" -Headers @{Authorization="Bearer pamlab-dev-token"} -Method GET
-Write-Host "PAM servers: $($pamServers.Count)"
+Write-Host "PAM servers: \$($pamServers.Count)"
 
 # Step 2: Get AD computer objects
 $adComputers = Invoke-RestMethod -Uri "$adBase/api/ad/computers" -Headers @{Authorization="Bearer pamlab-dev-token"} -Method GET
-Write-Host "AD computers: $($adComputers.Count)"
+Write-Host "AD computers: \$($adComputers.Count)"
 
 # Step 3: Query CMDB servers
 $cmdbServers = Invoke-RestMethod -Uri "$snowBase/api/now/table/cmdb_ci_server?sysparm_fields=name,ip_address,os,operational_status" -Headers $snowAuth -Method GET
-Write-Host "CMDB CIs: $($cmdbServers.result.Count)"
+Write-Host "CMDB CIs: \$($cmdbServers.result.Count)"
 foreach ($ci in $cmdbServers.result) {
-    Write-Host "  $($ci.name) - $($ci.ip_address) [$($ci.os)]"
+    Write-Host "  \$($ci.name) - \$($ci.ip_address) [\$($ci.os)]"
 }
 
 # Step 4: Get CMDB topology
 $topology = Invoke-RestMethod -Uri "$snowBase/api/now/cmdb/topology" -Headers $snowAuth -Method GET
-Write-Host "Topology: $($topology.result.nodes.Count) nodes, $($topology.result.edges.Count) edges"
+Write-Host "Topology: \$($topology.result.nodes.Count) nodes, \$($topology.result.edges.Count) edges"
 
 # Step 5: Order new server onboarding via catalog
 $order = @{
@@ -351,7 +352,7 @@ $order = @{
 $catalogItems = Invoke-RestMethod -Uri "$snowBase/api/now/catalog/items" -Headers $snowAuth -Method GET
 $itemId = $catalogItems.result[0].sys_id
 $orderResult = Invoke-RestMethod -Uri "$snowBase/api/now/catalog/items/$itemId/order" -Headers $snowAuth -Method POST -Body ($order | ConvertTo-Json -Depth 3) -ContentType "application/json"
-Write-Host "Catalog request created: $($orderResult.result.number)"
+Write-Host "Catalog request created: \$($orderResult.result.number)"
 `,
   },
   {
@@ -374,7 +375,7 @@ $auth = @{ Authorization = "Bearer pamlab-dev-token" }
 
 # Step 1: Check Fudo PAM events
 $events = Invoke-RestMethod -Uri "$fudoBase/api/v2/events" -Headers $auth -Method GET
-Write-Host "Found $($events.Count) PAM events"
+Write-Host "Found \$($events.Count) PAM events"
 
 # Step 2: Create JSM Incident
 $issue = @{
@@ -407,7 +408,7 @@ $search = @{
     maxResults = 5
 }
 $results = Invoke-RestMethod -Uri "$jsmBase/rest/api/2/search" -Headers $auth -Method POST -Body ($search | ConvertTo-Json) -ContentType "application/json"
-Write-Host "Found $($results.total) critical incidents"
+Write-Host "Found \$($results.total) critical incidents"
 `,
   },
   {
@@ -471,7 +472,7 @@ Write-Host "PAM access granted"
 
 # Step 6: Check SLA
 $sla = Invoke-RestMethod -Uri "$jsmBase/rest/servicedeskapi/request/$reqKey/sla" -Headers $auth -Method GET
-Write-Host "SLA status: $($sla.values[0].ongoingCycle.breached)"
+Write-Host "SLA status: \$($sla.values[0].ongoingCycle.breached)"
 `,
   },
   {
@@ -493,20 +494,20 @@ $auth = @{ Authorization = "Bearer pamlab-dev-token" }
 
 # Step 1: List JSM asset schemas
 $schemas = Invoke-RestMethod -Uri "$jsmBase/rest/assets/1.0/objectschema/list" -Headers $auth -Method GET
-Write-Host "Asset schemas: $($schemas.objectSchemas.Count)"
+Write-Host "Asset schemas: \$($schemas.objectSchemas.Count)"
 
 # Step 2: Get server objects from JSM
 $servers = Invoke-RestMethod -Uri "$jsmBase/rest/assets/1.0/object/aql?qlQuery=objectType%3DServer" -Headers $auth -Method GET
-Write-Host "JSM servers: $($servers.objectEntries.Count)"
+Write-Host "JSM servers: \$($servers.objectEntries.Count)"
 foreach ($s in $servers.objectEntries) {
-    Write-Host "  $($s.label) - $($s.objectType.name)"
+    Write-Host "  \$($s.label) - \$($s.objectType.name)"
 }
 
 # Step 3: Get SNOW CMDB servers
 $cmdb = Invoke-RestMethod -Uri "$snowBase/api/now/table/cmdb_ci_server?sysparm_fields=name,ip_address,os" -Headers $auth -Method GET
-Write-Host "SNOW CMDB servers: $($cmdb.result.Count)"
+Write-Host "SNOW CMDB servers: \$($cmdb.result.Count)"
 foreach ($ci in $cmdb.result) {
-    Write-Host "  $($ci.name) - $($ci.ip_address) [$($ci.os)]"
+    Write-Host "  \$($ci.name) - \$($ci.ip_address) [\$($ci.os)]"
 }
 
 # Step 4: Create reconciliation ticket if needed
@@ -545,7 +546,7 @@ $auth = @{ Authorization = "Bearer pamlab-dev-token" }
 
 # Step 1: Check Fudo PAM events
 $events = Invoke-RestMethod -Uri "$fudoBase/api/v2/events" -Headers $auth -Method GET
-Write-Host "Found $($events.Count) PAM events"
+Write-Host "Found \$($events.Count) PAM events"
 
 # Step 2: Login to Remedy (AR-JWT)
 $token = Invoke-RestMethod -Uri "$remedyBase/api/jwt/login" -Method POST -Body (@{username="admin";password="admin"} | ConvertTo-Json) -ContentType "application/json"
@@ -575,12 +576,12 @@ Write-Host "Work note added"
 
 # Step 5: Check SLA status
 $sla = Invoke-RestMethod -Uri "$remedyBase/api/arsys/v1/sla/status/$incNum" -Headers $auth -Method GET
-Write-Host "SLA breached: $($sla.response.breached)"
-Write-Host "Response time remaining: $([math]::Round($sla.response.remaining_ms / 60000))m"
+Write-Host "SLA breached: \$($sla.response.breached)"
+Write-Host "Response time remaining: \$([math]::Round($sla.response.remaining_ms / 60000))m"
 
 # Step 6: Get incident stats
 $stats = Invoke-RestMethod -Uri "$remedyBase/api/arsys/v1/incident/stats" -Headers $auth -Method GET
-Write-Host "Total open: $($stats.open), Critical: $($stats.by_priority.Critical)"
+Write-Host "Total open: \$($stats.open), Critical: \$($stats.by_priority.Critical)"
 `,
   },
   {
@@ -621,7 +622,7 @@ Write-Host "Created: $chgId"
 
 # Step 2: View change schedule
 $schedule = Invoke-RestMethod -Uri "$remedyBase/api/arsys/v1/change/schedule" -Headers $auth -Method GET
-Write-Host "Scheduled changes: $($schedule.result.Count)"
+Write-Host "Scheduled changes: \$($schedule.result.Count)"
 
 # Step 3: CAB Approval
 Invoke-RestMethod -Uri "$remedyBase/api/arsys/v1/change/$chgId/approve" -Headers $auth -Method POST -Body (@{approval_notes="Reviewed by CAB. Low risk, standard procedure."} | ConvertTo-Json) -ContentType "application/json"
@@ -633,11 +634,11 @@ Write-Host "Implementation started"
 
 # Step 5: Verify AD service accounts
 $adUsers = Invoke-RestMethod -Uri "$adBase/api/ad/users/svc-fudo-sync" -Headers $auth -Method GET
-Write-Host "Fudo sync account: $($adUsers.sAMAccountName) - Enabled: $($adUsers.enabled)"
+Write-Host "Fudo sync account: \$($adUsers.sAMAccountName) - Enabled: \$($adUsers.enabled)"
 
 # Step 6: Check Fudo PAM health
 $health = Invoke-RestMethod -Uri "$fudoBase/health" -Method GET
-Write-Host "Fudo PAM status: $($health.status)"
+Write-Host "Fudo PAM status: \$($health.status)"
 
 # Step 7: Complete change
 Invoke-RestMethod -Uri "$remedyBase/api/arsys/v1/change/$chgId/complete" -Headers $auth -Method POST -ContentType "application/json"
@@ -665,34 +666,34 @@ $auth = @{ Authorization = "Bearer pamlab-dev-token" }
 
 # Step 1: Get Remedy CMDB assets
 $remedyAssets = Invoke-RestMethod -Uri "$remedyBase/api/arsys/v1/entry/AST%3AComputerSystem" -Headers $auth -Method GET
-Write-Host "Remedy assets: $($remedyAssets.entries.Count)"
+Write-Host "Remedy assets: \$($remedyAssets.entries.Count)"
 foreach ($a in $remedyAssets.entries) {
-    Write-Host "  $($a.values.Name) - $($a.values.'IP Address') [$($a.values.'Operating System')]"
+    Write-Host "  \$($a.values.Name) - \$($a.values.'IP Address') [\$($a.values.'Operating System')]"
 }
 
 # Step 2: Get ServiceNow CMDB
 $snowCmdb = Invoke-RestMethod -Uri "$snowBase/api/now/table/cmdb_ci_server?sysparm_fields=name,ip_address,os" -Headers $auth -Method GET
-Write-Host "`nServiceNow CMDB: $($snowCmdb.result.Count)"
+Write-Host "\x60nServiceNow CMDB: \$($snowCmdb.result.Count)"
 foreach ($ci in $snowCmdb.result) {
-    Write-Host "  $($ci.name) - $($ci.ip_address) [$($ci.os)]"
+    Write-Host "  \$($ci.name) - \$($ci.ip_address) [\$($ci.os)]"
 }
 
 # Step 3: Get JSM Assets
 $jsmAssets = Invoke-RestMethod -Uri "$jsmBase/rest/assets/1.0/object/aql?qlQuery=objectType%3DServer" -Headers $auth -Method GET
-Write-Host "`nJSM Assets: $($jsmAssets.objectEntries.Count)"
+Write-Host "\x60nJSM Assets: \$($jsmAssets.objectEntries.Count)"
 foreach ($obj in $jsmAssets.objectEntries) {
-    Write-Host "  $($obj.label) - $($obj.objectType.name)"
+    Write-Host "  \$($obj.label) - \$($obj.objectType.name)"
 }
 
 # Step 4: Remedy asset topology
 $topology = Invoke-RestMethod -Uri "$remedyBase/api/arsys/v1/asset/topology" -Headers $auth -Method GET
-Write-Host "`nRemedy topology: $($topology.nodes.Count) nodes, $($topology.edges.Count) edges"
+Write-Host "\x60nRemedy topology: \$($topology.nodes.Count) nodes, \$($topology.edges.Count) edges"
 
 # Step 5: Summary
-Write-Host "`n=== CMDB AUDIT SUMMARY ==="
-Write-Host "Remedy:     $($remedyAssets.entries.Count) assets"
-Write-Host "ServiceNow: $($snowCmdb.result.Count) CIs"
-Write-Host "JSM:        $($jsmAssets.objectEntries.Count) objects"
+Write-Host "\x60n=== CMDB AUDIT SUMMARY ==="
+Write-Host "Remedy:     \$($remedyAssets.entries.Count) assets"
+Write-Host "ServiceNow: \$($snowCmdb.result.Count) CIs"
+Write-Host "JSM:        \$($jsmAssets.objectEntries.Count) objects"
 Write-Host "All three CMDBs should have matching server inventories."
 `,
   },
@@ -724,44 +725,44 @@ $auth = @{ Authorization = "Bearer pamlab-dev-token" }
 # === AD ===
 $adUsers = Invoke-RestMethod -Uri "$adBase/api/ad/users" -Headers $auth -Method GET
 $adGroups = Invoke-RestMethod -Uri "$adBase/api/ad/groups" -Headers $auth -Method GET
-Write-Host "AD: $($adUsers.Count) users, $($adGroups.Count) groups"
+Write-Host "AD: \$($adUsers.Count) users, \$($adGroups.Count) groups"
 
 # === Fudo PAM ===
 $sessions = Invoke-RestMethod -Uri "$fudoBase/api/v2/sessions" -Headers $auth -Method GET
 $pamUsers = Invoke-RestMethod -Uri "$fudoBase/api/v2/users" -Headers $auth -Method GET
-Write-Host "Fudo: $($pamUsers.Count) users, $($sessions.Count) sessions"
+Write-Host "Fudo: \$($pamUsers.Count) users, \$($sessions.Count) sessions"
 
 # === Matrix42 ===
 $tickets = Invoke-RestMethod -Uri "$matrixBase/m42Services/api/tickets" -Headers $auth -Method GET
-Write-Host "Matrix42: $($tickets.Count) tickets"
+Write-Host "Matrix42: \$($tickets.Count) tickets"
 
 # === ServiceNow ===
 $snowInc = Invoke-RestMethod -Uri "$snowBase/api/now/table/incident?sysparm_query=state!=7" -Headers $auth -Method GET
 $snowChg = Invoke-RestMethod -Uri "$snowBase/api/now/table/change_request" -Headers $auth -Method GET
 $snowCmdb = Invoke-RestMethod -Uri "$snowBase/api/now/table/cmdb_ci_server" -Headers $auth -Method GET
-Write-Host "ServiceNow: $($snowInc.result.Count) incidents, $($snowChg.result.Count) changes, $($snowCmdb.result.Count) CIs"
+Write-Host "ServiceNow: \$($snowInc.result.Count) incidents, \$($snowChg.result.Count) changes, \$($snowCmdb.result.Count) CIs"
 
 # === JSM ===
 $jsmInc = Invoke-RestMethod -Uri "$jsmBase/rest/api/2/search" -Headers $auth -Method POST -Body (@{jql="project = ITSM AND issuetype = Incident";maxResults=50} | ConvertTo-Json) -ContentType "application/json"
 $jsmSec = Invoke-RestMethod -Uri "$jsmBase/rest/api/2/search" -Headers $auth -Method POST -Body (@{jql="project = SEC";maxResults=50} | ConvertTo-Json) -ContentType "application/json"
 $jsmAssets = Invoke-RestMethod -Uri "$jsmBase/rest/assets/1.0/objectschema/list" -Headers $auth -Method GET
-Write-Host "JSM: $($jsmInc.total) incidents, $($jsmSec.total) security requests, $($jsmAssets.objectSchemas.Count) schemas"
+Write-Host "JSM: \$($jsmInc.total) incidents, \$($jsmSec.total) security requests, \$($jsmAssets.objectSchemas.Count) schemas"
 
 # === BMC Remedy ===
 $remInc = Invoke-RestMethod -Uri "$remedyBase/api/arsys/v1/entry/HPD%3AHelp%20Desk" -Headers $auth -Method GET
 $remChg = Invoke-RestMethod -Uri "$remedyBase/api/arsys/v1/entry/CHG%3AInfrastructure%20Change" -Headers $auth -Method GET
 $remAssets = Invoke-RestMethod -Uri "$remedyBase/api/arsys/v1/entry/AST%3AComputerSystem" -Headers $auth -Method GET
 $remStats = Invoke-RestMethod -Uri "$remedyBase/api/arsys/v1/incident/stats" -Headers $auth -Method GET
-Write-Host "Remedy: $($remInc.entries.Count) incidents, $($remChg.entries.Count) changes, $($remAssets.entries.Count) assets"
+Write-Host "Remedy: \$($remInc.entries.Count) incidents, \$($remChg.entries.Count) changes, \$($remAssets.entries.Count) assets"
 
 # === SUMMARY ===
-Write-Host "`n========================================="
+Write-Host "\x60n========================================="
 Write-Host "    ENTERPRISE AUDIT REPORT SUMMARY"
 Write-Host "========================================="
 Write-Host "Systems audited: 6"
 Write-Host "  AD, Fudo PAM, Matrix42 ESM"
 Write-Host "  ServiceNow ITSM, JSM, BMC Remedy"
-Write-Host "Report generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+Write-Host "Report generated: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 Write-Host "========================================="
 `,
   },
