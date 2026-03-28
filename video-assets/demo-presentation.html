@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAMlab — Interactive Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a28;
+    --border: #2a2a3a;
+    --text: #e0e0e8;
+    --text-dim: #8888a0;
+    --blue: #4a9eff;
+    --green: #4ade80;
+    --red: #f87171;
+    --yellow: #facc15;
+    --purple: #a78bfa;
+    --orange: #fb923c;
+    --cyan: #22d3ee;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+
+  /* Slide Container */
+  .slides { position: relative; width: 100vw; height: 100vh; }
+  .slide {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 60px 80px;
+    opacity: 0; transform: translateX(60px);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+  }
+  .slide.active {
+    opacity: 1; transform: translateX(0); pointer-events: auto;
+  }
+  .slide.prev {
+    opacity: 0; transform: translateX(-60px);
+  }
+
+  /* Nav */
+  .nav {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; z-index: 100; background: var(--surface2); padding: 8px 16px;
+    border-radius: 999px; border: 1px solid var(--border);
+  }
+  .nav-dot {
+    width: 10px; height: 10px; border-radius: 50%; background: var(--border);
+    cursor: pointer; transition: all 0.3s;
+  }
+  .nav-dot.active { background: var(--blue); width: 28px; border-radius: 5px; }
+  .nav-dot:hover { background: var(--text-dim); }
+
+  .slide-counter {
+    position: fixed; bottom: 32px; right: 40px; font-size: 13px; color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace; z-index: 100;
+  }
+
+  .keys-hint {
+    position: fixed; bottom: 32px; left: 40px; font-size: 12px; color: var(--text-dim);
+    z-index: 100; font-family: 'JetBrains Mono', monospace;
+  }
+  .keys-hint kbd {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+    padding: 2px 6px; font-size: 11px;
+  }
+
+  /* Typography */
+  h1 { font-size: 4rem; font-weight: 900; line-height: 1.1; letter-spacing: -0.03em; }
+  h2 { font-size: 2.8rem; font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; }
+  h3 { font-size: 1.8rem; font-weight: 700; line-height: 1.3; }
+  .subtitle { font-size: 1.3rem; color: var(--text-dim); margin-top: 16px; font-weight: 400; }
+  .accent { color: var(--blue); }
+  .accent-green { color: var(--green); }
+  .accent-purple { color: var(--purple); }
+  .accent-orange { color: var(--orange); }
+  .accent-red { color: var(--red); }
+  .accent-cyan { color: var(--cyan); }
+
+  /* Cards */
+  .card-grid { display: grid; gap: 16px; margin-top: 40px; width: 100%; max-width: 1200px; }
+  .card-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .card-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .card-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .card-grid.cols-7 { grid-template-columns: repeat(7, 1fr); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 24px; transition: all 0.3s;
+  }
+  .card:hover { border-color: var(--blue); transform: translateY(-2px); }
+  .card .icon { font-size: 2rem; margin-bottom: 12px; }
+  .card .title { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+  .card .desc { font-size: 0.85rem; color: var(--text-dim); line-height: 1.5; }
+  .card .port { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--blue); margin-top: 8px; }
+
+  .service-card {
+    text-align: center; padding: 20px 12px;
+  }
+  .service-card .status {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green); margin-right: 6px; animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Code Block */
+  .code-block {
+    background: #0d1117; border: 1px solid #21262d; border-radius: 12px;
+    padding: 24px 28px; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;
+    line-height: 1.7; overflow-x: auto; width: 100%; max-width: 1000px; margin-top: 30px;
+    color: #c9d1d9;
+  }
+  .code-block .comment { color: #8b949e; }
+  .code-block .keyword { color: #ff7b72; }
+  .code-block .string { color: #a5d6ff; }
+  .code-block .variable { color: #79c0ff; }
+  .code-block .number { color: #f2cc60; }
+
+  /* Stats Row */
+  .stats-row {
+    display: flex; gap: 40px; margin-top: 40px; justify-content: center;
+  }
+  .stat { text-align: center; }
+  .stat .value { font-size: 3rem; font-weight: 900; color: var(--blue); }
+  .stat .label { font-size: 0.9rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Flow Diagram */
+  .flow {
+    display: flex; align-items: center; gap: 12px; margin-top: 40px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .flow-step {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 20px; text-align: center; min-width: 140px;
+  }
+  .flow-step .step-num {
+    font-size: 0.75rem; font-weight: 700; color: var(--blue); margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .flow-step .step-label { font-size: 0.9rem; font-weight: 500; }
+  .flow-arrow { font-size: 1.4rem; color: var(--text-dim); }
+
+  /* Test Results */
+  .test-bar {
+    display: flex; height: 32px; border-radius: 8px; overflow: hidden; margin-top: 16px;
+    width: 100%; max-width: 800px;
+  }
+  .test-bar .pass { background: var(--green); flex: 82; }
+  .test-bar .warn { background: var(--yellow); flex: 8; }
+  .test-bar .fail { background: var(--red); flex: 8; }
+
+  /* Scenario List */
+  .scenario-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin-top: 30px; width: 100%; max-width: 1100px;
+  }
+  .scenario-pill {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; display: flex; align-items: center; gap: 10px;
+    font-size: 0.9rem; transition: all 0.3s;
+  }
+  .scenario-pill:hover { border-color: var(--blue); }
+  .scenario-pill .emoji { font-size: 1.3rem; }
+
+  /* Terminal */
+  .terminal {
+    background: #0d1117; border: 1px solid #21262d; border-radius: 12px;
+    padding: 20px 24px; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+    line-height: 1.8; width: 100%; max-width: 900px; margin-top: 30px;
+  }
+  .terminal .prompt { color: var(--green); }
+  .terminal .output { color: #8b949e; }
+  .terminal .success { color: var(--green); }
+  .terminal .fail { color: var(--red); }
+  .terminal .warn { color: var(--yellow); }
+
+  /* Tag */
+  .tag {
+    display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 0.78rem;
+    font-weight: 600; margin: 3px;
+  }
+  .tag-blue { background: rgba(74,158,255,0.15); color: var(--blue); }
+  .tag-green { background: rgba(74,222,128,0.15); color: var(--green); }
+  .tag-purple { background: rgba(167,139,250,0.15); color: var(--purple); }
+  .tag-orange { background: rgba(251,146,60,0.15); color: var(--orange); }
+  .tag-cyan { background: rgba(34,211,238,0.15); color: var(--cyan); }
+  .tag-red { background: rgba(248,113,113,0.15); color: var(--red); }
+
+  .wide { width: 100%; max-width: 1200px; }
+  .text-center { text-align: center; }
+  .mt-2 { margin-top: 16px; }
+  .mt-4 { margin-top: 32px; }
+</style>
+</head>
+<body>
+
+<div class="slides" id="slides">
+
+  <!-- SLIDE 0: Title -->
+  <div class="slide active" data-slide="0">
+    <div class="text-center">
+      <div style="font-size:5rem; margin-bottom: 20px;">🔐</div>
+      <h1>PAMlab</h1>
+      <p class="subtitle" style="font-size:1.5rem; max-width: 700px; margin: 20px auto 0;">
+        Open-Source Dev Environment for<br>
+        <span class="accent">Privileged Access Management</span>
+      </p>
+      <div class="mt-4" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+        <span class="tag tag-blue">Fudo PAM</span>
+        <span class="tag tag-green">Active Directory</span>
+        <span class="tag tag-purple">Matrix42 ESM</span>
+        <span class="tag tag-orange">ServiceNow</span>
+        <span class="tag tag-cyan">Jira Service Mgmt</span>
+        <span class="tag tag-red">BMC Remedy</span>
+      </div>
+      <div class="stats-row" style="margin-top:50px;">
+        <div class="stat"><div class="value">7</div><div class="label">Microservices</div></div>
+        <div class="stat"><div class="value">15</div><div class="label">Scenarios</div></div>
+        <div class="stat"><div class="value">98</div><div class="label">Tests</div></div>
+        <div class="stat"><div class="value">&lt;60s</div><div class="label">Startup</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 1: The Problem -->
+  <div class="slide" data-slide="1">
+    <div class="text-center">
+      <h2>Das Problem</h2>
+      <p class="subtitle" style="max-width:750px; margin: 16px auto 0;">
+        Du entwickelst IAM/PAM-Integrationen — aber die echten Systeme sind
+      </p>
+      <div class="card-grid cols-3 mt-4" style="max-width:900px; margin-left:auto; margin-right:auto;">
+        <div class="card text-center">
+          <div class="icon">💰</div>
+          <div class="title accent-red">Teuer</div>
+          <div class="desc">Fudo PAM, ServiceNow, Remedy — tausende Euro pro Lizenz. Keine Dev-Instanzen verfügbar.</div>
+        </div>
+        <div class="card text-center">
+          <div class="icon">🔒</div>
+          <div class="title accent-orange">Gesperrt</div>
+          <div class="desc">Produktivsysteme sind tabu zum Testen. Ein falscher API-Call und der AD ist kaputt.</div>
+        </div>
+        <div class="card text-center">
+          <div class="icon">⏰</div>
+          <div class="title accent-purple">Langsam</div>
+          <div class="desc">Wochen warten auf Testumgebung-Genehmigung. Change Advisory Board, Security Review...</div>
+        </div>
+      </div>
+      <p class="subtitle mt-4" style="font-size:1.6rem; color:var(--blue); font-weight:600;">
+        PAMlab gibt dir alle 6 Systeme in unter einer Minute.
+      </p>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: Architecture -->
+  <div class="slide" data-slide="2">
+    <div class="text-center wide">
+      <h2>Architektur</h2>
+      <p class="subtitle">7 Microservices · Docker Compose · Realistische Mock-APIs</p>
+      <div class="card-grid cols-7 mt-4">
+        <div class="card service-card">
+          <div class="icon">🛡️</div>
+          <div class="title">Fudo PAM</div>
+          <div class="port"><span class="status"></span>:8443</div>
+          <div class="desc mt-2">Sessions, Server, Access Requests, Events</div>
+        </div>
+        <div class="card service-card">
+          <div class="icon">📋</div>
+          <div class="title">Matrix42</div>
+          <div class="port"><span class="status"></span>:8444</div>
+          <div class="desc mt-2">Tickets, Assets, Users, Software, Webhooks</div>
+        </div>
+        <div class="card service-card">
+          <div class="icon">👥</div>
+          <div class="title">Active Directory</div>
+          <div class="port"><span class="status"></span>:8445</div>
+          <div class="desc mt-2">Users, Groups, OUs, Computers, Auth</div>
+        </div>
+        <div class="card service-card">
+          <div class="icon">🔗</div>
+          <div class="title">Pipeline Engine</div>
+          <div class="port"><span class="status"></span>:8446</div>
+          <div class="desc mt-2">YAML Workflows, Connectors, Dry-Run</div>
+        </div>
+        <div class="card service-card">
+          <div class="icon">❄️</div>
+          <div class="title">ServiceNow</div>
+          <div class="port"><span class="status"></span>:8447</div>
+          <div class="desc mt-2">Incidents, Changes, CMDB, Catalog</div>
+        </div>
+        <div class="card service-card">
+          <div class="icon">🎫</div>
+          <div class="title">Jira SM</div>
+          <div class="port"><span class="status"></span>:8448</div>
+          <div class="desc mt-2">Issues, Approvals, SLA, Assets, JQL</div>
+        </div>
+        <div class="card service-card">
+          <div class="icon">⚕️</div>
+          <div class="title">BMC Remedy</div>
+          <div class="port"><span class="status"></span>:8449</div>
+          <div class="desc mt-2">Incidents, Changes, CMDB, SLA, AR-JWT</div>
+        </div>
+      </div>
+      <div class="mt-4" style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+        <span class="tag tag-green">10 AD Users</span>
+        <span class="tag tag-blue">6 Security Groups</span>
+        <span class="tag tag-purple">5 Servers</span>
+        <span class="tag tag-orange">8 Incidents</span>
+        <span class="tag tag-cyan">5 Changes</span>
+        <span class="tag tag-red">SLA Definitions</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: PAMlab Studio -->
+  <div class="slide" data-slide="3">
+    <div class="text-center wide">
+      <h2>🖥️ PAMlab Studio</h2>
+      <p class="subtitle">React Frontend · Dark Mode · 7 Ansichten</p>
+      <div class="card-grid cols-4 mt-4" style="max-width:1000px; margin-left:auto; margin-right:auto;">
+        <div class="card text-center">
+          <div class="icon">🏠</div>
+          <div class="title">Dashboard</div>
+          <div class="desc">Live Health-Status aller APIs mit Auto-Refresh</div>
+        </div>
+        <div class="card text-center">
+          <div class="icon">📋</div>
+          <div class="title">Scenarios</div>
+          <div class="desc">15 vorgefertigte Workflows, sofort ausführbar</div>
+        </div>
+        <div class="card text-center">
+          <div class="icon">📝</div>
+          <div class="title">Code Editor</div>
+          <div class="desc">Monaco Editor mit PowerShell/Script Highlighting</div>
+        </div>
+        <div class="card text-center">
+          <div class="icon">🔍</div>
+          <div class="title">API Explorer</div>
+          <div class="desc">Alle Endpoints browsen und direkt testen</div>
+        </div>
+        <div class="card text-center">
+          <div class="icon">⚡</div>
+          <div class="title">Event Stream</div>
+          <div class="desc">Live SSE Events von allen Services</div>
+        </div>
+        <div class="card text-center">
+          <div class="icon">📊</div>
+          <div class="title">Results</div>
+          <div class="desc">Step-by-Step Ergebnisse mit API Traffic</div>
+        </div>
+        <div class="card text-center">
+          <div class="icon">⚙️</div>
+          <div class="title">Settings</div>
+          <div class="desc">API URLs, Auth Tokens, Proxy Config</div>
+        </div>
+        <div class="card text-center" style="border-color:var(--blue); background: rgba(74,158,255,0.05);">
+          <div class="icon">🚀</div>
+          <div class="title accent">One Click</div>
+          <div class="desc">Scenario → Script → Execute → Results in Sekunden</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: Workflow Demo - Onboarding -->
+  <div class="slide" data-slide="4">
+    <div class="text-center wide">
+      <h2>Workflow: Employee Onboarding</h2>
+      <p class="subtitle">Cross-System Automation über 3 APIs</p>
+      <div class="flow mt-4">
+        <div class="flow-step" style="border-color:var(--green);">
+          <div class="step-num">STEP 1</div>
+          <div class="step-label">👥 AD User<br>erstellen</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" style="border-color:var(--green);">
+          <div class="step-num">STEP 2</div>
+          <div class="step-label">🔑 Security Groups<br>zuweisen</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" style="border-color:var(--blue);">
+          <div class="step-num">STEP 3</div>
+          <div class="step-label">🛡️ Fudo PAM<br>User anlegen</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" style="border-color:var(--blue);">
+          <div class="step-num">STEP 4</div>
+          <div class="step-label">🔗 Server Access<br>provisionieren</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" style="border-color:var(--purple);">
+          <div class="step-num">STEP 5</div>
+          <div class="step-label">📋 ESM Ticket<br>erstellen</div>
+        </div>
+      </div>
+      <div class="code-block mt-4" style="text-align:left;">
+        <span class="comment"># Step 1: Create AD User</span><br>
+        <span class="variable">$adUser</span> = @{ username = <span class="string">"jdoe"</span>; firstName = <span class="string">"John"</span>; lastName = <span class="string">"Doe"</span> }<br>
+        Invoke-RestMethod -Uri <span class="string">"$adBase/api/users"</span> -Method <span class="keyword">POST</span> -Body ($adUser | ConvertTo-Json)<br><br>
+        <span class="comment"># Step 3: Create Fudo PAM User</span><br>
+        <span class="variable">$pamUser</span> = @{ name = <span class="string">"jdoe"</span>; email = <span class="string">"jdoe@corp.local"</span> }<br>
+        Invoke-RestMethod -Uri <span class="string">"$fudoBase/api/v2/users"</span> -Method <span class="keyword">POST</span> -Body ($pamUser | ConvertTo-Json)<br><br>
+        <span class="comment"># Step 5: Create ESM Ticket</span><br>
+        <span class="variable">$ticket</span> = @{ title = <span class="string">"Onboarding: John Doe"</span>; priority = <span class="string">"medium"</span> }<br>
+        Invoke-RestMethod -Uri <span class="string">"$matrixBase/api/tickets"</span> -Method <span class="keyword">POST</span> -Body ($ticket | ConvertTo-Json)
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: Pipeline Engine -->
+  <div class="slide" data-slide="5">
+    <div class="text-center wide">
+      <h2>🔗 Pipeline Engine</h2>
+      <p class="subtitle">YAML-basierte Cross-System Orchestrierung</p>
+      <div class="card-grid cols-2 mt-4" style="max-width:1000px; margin-left:auto; margin-right:auto;">
+        <div class="code-block" style="margin-top:0; text-align:left;">
+          <span class="comment"># onboarding-pipeline.yaml</span><br>
+          <span class="keyword">name</span>: <span class="string">employee-onboarding</span><br>
+          <span class="keyword">steps</span>:<br>
+          &nbsp; - <span class="keyword">name</span>: <span class="string">create-ad-user</span><br>
+          &nbsp;&nbsp;&nbsp; <span class="keyword">connector</span>: <span class="string">active-directory</span><br>
+          &nbsp;&nbsp;&nbsp; <span class="keyword">action</span>: <span class="string">createUser</span><br>
+          &nbsp;&nbsp;&nbsp; <span class="keyword">params</span>:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; username: <span class="variable">${"${user}"}</span><br><br>
+          &nbsp; - <span class="keyword">name</span>: <span class="string">provision-pam</span><br>
+          &nbsp;&nbsp;&nbsp; <span class="keyword">connector</span>: <span class="string">fudo-pam</span><br>
+          &nbsp;&nbsp;&nbsp; <span class="keyword">action</span>: <span class="string">createUser</span><br><br>
+          &nbsp; - <span class="keyword">name</span>: <span class="string">create-ticket</span><br>
+          &nbsp;&nbsp;&nbsp; <span class="keyword">connector</span>: <span class="string">matrix42-esm</span><br>
+          &nbsp;&nbsp;&nbsp; <span class="keyword">action</span>: <span class="string">createTicket</span>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="title">▶️ Execute</div>
+            <div class="desc">POST /pipelines/run mit Variables und optionalem Dry-Run</div>
+          </div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="title">✅ Validate</div>
+            <div class="desc">POST /pipelines/validate prüft YAML-Syntax und Connector-Verfügbarkeit</div>
+          </div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="title">📜 History</div>
+            <div class="desc">GET /pipelines/runs zeigt alle vergangenen Pipeline-Ausführungen</div>
+          </div>
+          <div class="card">
+            <div class="title">🧪 Dry-Run</div>
+            <div class="desc">Testet den gesamten Workflow ohne Side-Effects</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: Testing -->
+  <div class="slide" data-slide="6">
+    <div class="text-center wide">
+      <h2>🧪 Testing & Quality</h2>
+      <p class="subtitle">98 Integration Tests · Automatisierte Validierung</p>
+      <div style="max-width:800px; margin:30px auto 0;">
+        <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom:8px;">
+          <span><span class="accent-green">■</span> 82 Passed</span>
+          <span><span style="color:var(--yellow);">■</span> 8 Warnings</span>
+          <span><span class="accent-red">■</span> 8 Failed → Fixed!</span>
+        </div>
+        <div class="test-bar"></div>
+      </div>
+      <div class="terminal mt-4" style="text-align:left;">
+        <span class="prompt">$</span> node tests/integration.js<br>
+        <span class="output">Running 98 tests across 7 services...</span><br><br>
+        <span class="success">✓</span> Health Check: All 7 services responding<br>
+        <span class="success">✓</span> AD: CRUD users, groups, computers<br>
+        <span class="success">✓</span> Fudo PAM: Sessions, access requests, events<br>
+        <span class="success">✓</span> ServiceNow: Incidents, changes, CMDB, catalog<br>
+        <span class="success">✓</span> JSM: Issues, transitions, approvals, SLA, assets<br>
+        <span class="success">✓</span> Remedy: Incidents, changes, CMDB, SLA, AR-JWT<br>
+        <span class="success">✓</span> Pipeline: Validate, dry-run, execute, history<br>
+        <span class="success">✓</span> Cross-System: Onboarding, emergency revoke, CMDB sync<br>
+        <span class="fail">✗</span> <span style="text-decoration:line-through;">AD Auth: accepts any password</span> <span class="success">→ FIXED</span><br>
+        <span class="fail">✗</span> <span style="text-decoration:line-through;">Remedy Auth: accepts any password</span> <span class="success">→ FIXED</span><br><br>
+        <span class="success">Result: 90 passed, 8 warnings, 0 failed</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: Scenarios -->
+  <div class="slide" data-slide="7">
+    <div class="text-center wide">
+      <h2>📋 15 Real-World Scenarios</h2>
+      <p class="subtitle">Jedes Szenario ist 1:1 übertragbar auf Produktivsysteme</p>
+      <div class="scenario-grid">
+        <div class="scenario-pill"><span class="emoji">👤</span> Onboarding</div>
+        <div class="scenario-pill"><span class="emoji">👋</span> Offboarding</div>
+        <div class="scenario-pill"><span class="emoji">🔄</span> Role Change</div>
+        <div class="scenario-pill"><span class="emoji">⏱️</span> JIT Access</div>
+        <div class="scenario-pill"><span class="emoji">🚨</span> Emergency Revoke</div>
+        <div class="scenario-pill"><span class="emoji">🔑</span> Password Rotation</div>
+        <div class="scenario-pill"><span class="emoji">🔥</span> SNOW Incident from PAM</div>
+        <div class="scenario-pill"><span class="emoji">📝</span> SNOW Change Request</div>
+        <div class="scenario-pill"><span class="emoji">🗄️</span> CMDB Sync & Discovery</div>
+        <div class="scenario-pill"><span class="emoji">🎫</span> JSM Incident from PAM</div>
+        <div class="scenario-pill"><span class="emoji">✅</span> JSM Approval Workflow</div>
+        <div class="scenario-pill"><span class="emoji">🔗</span> JSM ↔ CMDB Sync</div>
+        <div class="scenario-pill"><span class="emoji">⚕️</span> Remedy Incident</div>
+        <div class="scenario-pill"><span class="emoji">🔧</span> Remedy Change</div>
+        <div class="scenario-pill"><span class="emoji">📊</span> Full Enterprise Audit</div>
+      </div>
+      <p class="mt-4" style="color:var(--text-dim); font-size:0.95rem;">
+        Jedes Szenario generiert fertigen PowerShell-Code · Direkt im Studio ausführbar
+      </p>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: Getting Started -->
+  <div class="slide" data-slide="8">
+    <div class="text-center">
+      <h2>🚀 Getting Started</h2>
+      <p class="subtitle">Drei Befehle. Eine Minute. Fertig.</p>
+      <div class="code-block mt-4" style="text-align:left; max-width:700px;">
+        <span class="comment"># Clone the repo</span><br>
+        <span class="prompt">$</span> git clone https://github.com/BenediktSchackenberg/PAMlab.git<br><br>
+        <span class="comment"># Start all 7 services + Studio</span><br>
+        <span class="prompt">$</span> docker compose up -d<br><br>
+        <span class="comment"># Open PAMlab Studio</span><br>
+        <span class="prompt">$</span> open http://localhost:3000<br><br>
+        <span class="output">🔐 Fudo PAM ......... http://localhost:8443</span><br>
+        <span class="output">📋 Matrix42 ESM ..... http://localhost:8444</span><br>
+        <span class="output">👥 Active Directory . http://localhost:8445</span><br>
+        <span class="output">🔗 Pipeline Engine .. http://localhost:8446</span><br>
+        <span class="output">❄️ ServiceNow ....... http://localhost:8447</span><br>
+        <span class="output">🎫 Jira SM .......... http://localhost:8448</span><br>
+        <span class="output">⚕️ BMC Remedy ....... http://localhost:8449</span><br>
+        <span class="output">🖥️ PAMlab Studio .... http://localhost:3000</span>
+      </div>
+      <div class="mt-4" style="display:flex; gap:16px; justify-content:center;">
+        <span class="tag tag-blue" style="font-size:1rem; padding:8px 20px;">⭐ github.com/BenediktSchackenberg/PAMlab</span>
+        <span class="tag tag-green" style="font-size:1rem; padding:8px 20px;">MIT License</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav" id="nav"></div>
+<div class="slide-counter" id="counter">1 / 9</div>
+<div class="keys-hint"><kbd>←</kbd> <kbd>→</kbd> or click dots</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const nav = document.getElementById('nav');
+const counter = document.getElementById('counter');
+let current = 0;
+
+// Build nav dots
+slides.forEach((_, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+  dot.onclick = () => goTo(i);
+  nav.appendChild(dot);
+});
+
+function goTo(n) {
+  if (n < 0 || n >= slides.length) return;
+  slides[current].className = n > current ? 'slide prev' : 'slide';
+  current = n;
+  slides[current].className = 'slide active';
+  document.querySelectorAll('.nav-dot').forEach((d, i) => {
+    d.className = 'nav-dot' + (i === current ? ' active' : '');
+  });
+  counter.textContent = `${current + 1} / ${slides.length}`;
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(current - 1); }
+  if (e.key === 'Home') goTo(0);
+  if (e.key === 'End') goTo(slides.length - 1);
+});
+
+// Touch support
+let touchStartX = 0;
+document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', (e) => {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) goTo(current + (diff > 0 ? 1 : -1));
+});
+
+// Auto-play mode (click title to toggle)
+let autoPlay = null;
+slides[0].addEventListener('dblclick', () => {
+  if (autoPlay) { clearInterval(autoPlay); autoPlay = null; }
+  else { autoPlay = setInterval(() => goTo((current + 1) % slides.length), 5000); }
+});
+</script>
+
+</body>
+</html>
