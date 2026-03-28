@@ -52,9 +52,10 @@ export const connectors: Connector[] = [
         name: 'Disable User',
         description: 'Disable an AD user account',
         method: 'PUT',
-        path: '/api/users/{sAMAccountName}/disable',
+        path: '/api/users/{sAMAccountName}',
         params: [
           { id: 'sAMAccountName', label: 'Username', type: 'text', placeholder: 'j.doe', required: true },
+          { id: 'enabled', label: 'Enabled', type: 'hidden', default: 'false' },
         ],
       },
       {
@@ -111,9 +112,9 @@ export const connectors: Connector[] = [
         path: '/api/v2/groups/{groupId}/users',
         params: [
           { id: 'groupId', label: 'Fudo Group', type: 'select', required: true, options: [
-            { value: 'RDP-Server-Admins', label: 'RDP-Server-Admins (→ IT-Administration Safe)' },
-            { value: 'DB-Operators', label: 'DB-Operators (→ Application-Access Safe)' },
-            { value: 'Integration-Services', label: 'Integration-Services (→ IT-Admin + App Safe)' },
+            { value: '70000000-0000-0000-0000-000000000001', label: 'RDP-Server-Admins (→ IT-Administration Safe)' },
+            { value: '70000000-0000-0000-0000-000000000002', label: 'DB-Operators (→ Application-Access Safe)' },
+            { value: '70000000-0000-0000-0000-000000000003', label: 'Integration-Services (→ IT-Admin + App Safe)' },
           ]},
           { id: 'user_id', label: 'User ID', type: 'text', placeholder: 'uuid', required: true },
         ],
@@ -127,19 +128,19 @@ export const connectors: Connector[] = [
         params: [
           { id: 'name', label: 'Policy Name', type: 'text', placeholder: 'Engineering RDP Access', required: true },
           { id: 'group_id', label: 'Group', type: 'select', required: true, options: [
-            { value: 'RDP-Server-Admins', label: 'RDP-Server-Admins' },
-            { value: 'DB-Operators', label: 'DB-Operators' },
-            { value: 'Integration-Services', label: 'Integration-Services' },
+            { value: '70000000-0000-0000-0000-000000000001', label: 'RDP-Server-Admins' },
+            { value: '70000000-0000-0000-0000-000000000002', label: 'DB-Operators' },
+            { value: '70000000-0000-0000-0000-000000000003', label: 'Integration-Services' },
           ]},
           { id: 'safe_id', label: 'Safe (Server Group)', type: 'select', required: true, options: [
-            { value: 'IT-Administration', label: 'IT-Administration (DC01, DB, ERP)' },
-            { value: 'Application-Access', label: 'Application-Access (ERP Server)' },
-            { value: 'File-Server-Access', label: 'File-Server-Access (FileServer01)' },
-            { value: 'Web-Server-Deployment', label: 'Web-Server-Deployment (Web + Citrix)' },
+            { value: '40000000-0000-0000-0000-000000000001', label: 'IT-Administration (DC01, DB, ERP)' },
+            { value: '40000000-0000-0000-0000-000000000002', label: 'Application-Access (ERP Server)' },
+            { value: '40000000-0000-0000-0000-000000000003', label: 'File-Server-Access (FileServer01)' },
+            { value: '40000000-0000-0000-0000-000000000004', label: 'Web-Server-Deployment (Web + Citrix)' },
           ]},
           { id: 'listener_id', label: 'Protocol', type: 'select', options: [
-            { value: 'rdp', label: 'RDP (Remote Desktop)' },
-            { value: 'ssh', label: 'SSH (Secure Shell)' },
+            { value: '50000000-0000-0000-0000-000000000002', label: 'RDP (Remote Desktop)' },
+            { value: '50000000-0000-0000-0000-000000000001', label: 'SSH (Secure Shell)' },
           ]},
           { id: 'max_duration_hours', label: 'Max Duration (hours)', type: 'number', placeholder: '8' },
           { id: 'require_approval', label: 'Require Approval', type: 'select', default: 'false', options: [
@@ -165,7 +166,7 @@ export const connectors: Connector[] = [
         id: 'fudo-block-user',
         name: 'Block User',
         description: 'Block a Fudo PAM user (revoke all access)',
-        method: 'PUT',
+        method: 'POST',
         path: '/api/v2/users/{userId}/block',
         params: [
           { id: 'userId', label: 'User ID', type: 'text', placeholder: 'uuid', required: true },

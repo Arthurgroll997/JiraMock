@@ -87,12 +87,17 @@ function generateStep(step: WorkflowStep, index: number): string {
       // Special: members array for group actions
       if (key === 'sAMAccountName' && action.id === 'ad-add-to-group') {
         lines.push(`  members = @("${val}")`);
+      } else if (val === 'true' || val === 'false') {
+        // Boolean values — PowerShell $true/$false
+        lines.push(`  ${key} = \$${val}`);
       } else {
         lines.push(`  ${key} = "${val}"`);
       }
     }
     lines.push(`}`);
     lines.push(`\$step${index + 1}Result = Invoke-RestMethod -Uri "\$${varName}${path}" -Method ${action.method} -Body (\$${stepVar} | ConvertTo-Json) -ContentType "application/json" -Headers \$headers`);
+  } else if (action.method === 'DELETE') {
+    lines.push(`\$step${index + 1}Result = Invoke-RestMethod -Uri "\$${varName}${path}" -Method ${action.method} -Headers \$headers`);
   } else {
     lines.push(`\$step${index + 1}Result = Invoke-RestMethod -Uri "\$${varName}${path}" -Method ${action.method} -Headers \$headers`);
   }

@@ -63,6 +63,8 @@ router.put('/:id', (req, res) => {
   const list = store.objects.SPSActivityClassBase;
   const idx = list.findIndex(t => t.ID === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Ticket not found' });
+  // Normalize status field (accept both "status" and "Status")
+  if (req.body.status && !req.body.Status) req.body.Status = req.body.status;
   list[idx] = { ...list[idx], ...req.body, ID: req.params.id, ModifiedDate: new Date().toISOString() };
   res.json(list[idx]);
 });

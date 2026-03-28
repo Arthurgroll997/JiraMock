@@ -3,14 +3,16 @@ const { v4: uuidv4 } = require('uuid');
 const now = new Date().toISOString();
 const hour = h => { const d = new Date(); d.setHours(d.getHours() - h); return d.toISOString(); };
 
-// IDs
+// IDs — fixed UUIDs for stable references (used by templates)
 const ids = {
-  users: { admin: uuidv4(), svcIntegration: uuidv4(), jdoe: uuidv4(), asmith: uuidv4(), itOps: uuidv4() },
-  servers: { dc01: uuidv4(), dbProd: uuidv4(), appErp: uuidv4(), fileserver01: uuidv4(), webProd: uuidv4(), citrix01: uuidv4() },
-  accounts: { adminDc01: uuidv4(), postgresDb: uuidv4(), erpAdmin: uuidv4(), adminFile: uuidv4(), deployWeb: uuidv4(), adminCitrix: uuidv4() },
-  safes: { itAdmin: uuidv4(), appAccess: uuidv4(), fileAccess: uuidv4(), webServers: uuidv4() },
-  listeners: { ssh: uuidv4(), rdp: uuidv4() },
-  pools: { production: uuidv4() },
+  users: { admin: '10000000-0000-0000-0000-000000000001', svcIntegration: '10000000-0000-0000-0000-000000000002', jdoe: '10000000-0000-0000-0000-000000000003', asmith: '10000000-0000-0000-0000-000000000004', itOps: '10000000-0000-0000-0000-000000000005' },
+  servers: { dc01: '20000000-0000-0000-0000-000000000001', dbProd: '20000000-0000-0000-0000-000000000002', appErp: '20000000-0000-0000-0000-000000000003', fileserver01: '20000000-0000-0000-0000-000000000004', webProd: '20000000-0000-0000-0000-000000000005', citrix01: '20000000-0000-0000-0000-000000000006' },
+  accounts: { adminDc01: '30000000-0000-0000-0000-000000000001', postgresDb: '30000000-0000-0000-0000-000000000002', erpAdmin: '30000000-0000-0000-0000-000000000003', adminFile: '30000000-0000-0000-0000-000000000004', deployWeb: '30000000-0000-0000-0000-000000000005', adminCitrix: '30000000-0000-0000-0000-000000000006' },
+  safes: { itAdmin: '40000000-0000-0000-0000-000000000001', appAccess: '40000000-0000-0000-0000-000000000002', fileAccess: '40000000-0000-0000-0000-000000000003', webServers: '40000000-0000-0000-0000-000000000004' },
+  listeners: { ssh: '50000000-0000-0000-0000-000000000001', rdp: '50000000-0000-0000-0000-000000000002' },
+  pools: { production: '60000000-0000-0000-0000-000000000001' },
+  groups: { rdpAdmins: '70000000-0000-0000-0000-000000000001', dbOperators: '70000000-0000-0000-0000-000000000002', integrationServices: '70000000-0000-0000-0000-000000000003' },
+  policies: { itAdminFull: '80000000-0000-0000-0000-000000000001', dbTeamApp: '80000000-0000-0000-0000-000000000002', integration: '80000000-0000-0000-0000-000000000003' },
 };
 
 const users = [
@@ -99,11 +101,10 @@ const authMethods = [
 
 // Groups
 const groups = [
-  { id: uuidv4(), name: 'RDP-Server-Admins', description: 'Administrators with RDP access to server infrastructure', ad_group_dn: 'CN=GRP-RDP-Admins,OU=Security Groups,DC=corp,DC=local', created_at: '2024-02-01T08:00:00Z', modified_at: now },
-  { id: uuidv4(), name: 'DB-Operators', description: 'Database operations team', ad_group_dn: 'CN=GRP-DB-Operators,OU=Security Groups,DC=corp,DC=local', created_at: '2024-03-15T08:00:00Z', modified_at: now },
-  { id: uuidv4(), name: 'Integration-Services', description: 'Service accounts for system integration', ad_group_dn: 'CN=GRP-SVC-Integration,OU=Service Accounts,DC=corp,DC=local', created_at: '2025-06-01T10:00:00Z', modified_at: now },
+  { id: ids.groups.rdpAdmins, name: 'RDP-Server-Admins', description: 'Administrators with RDP access to server infrastructure', ad_group_dn: 'CN=GRP-RDP-Admins,OU=Security Groups,DC=corp,DC=local', created_at: '2024-02-01T08:00:00Z', modified_at: now },
+  { id: ids.groups.dbOperators, name: 'DB-Operators', description: 'Database operations team', ad_group_dn: 'CN=GRP-DB-Operators,OU=Security Groups,DC=corp,DC=local', created_at: '2024-03-15T08:00:00Z', modified_at: now },
+  { id: ids.groups.integrationServices, name: 'Integration-Services', description: 'Service accounts for system integration', ad_group_dn: 'CN=GRP-SVC-Integration,OU=Service Accounts,DC=corp,DC=local', created_at: '2025-06-01T10:00:00Z', modified_at: now },
 ];
-ids.groups = { rdpAdmins: groups[0].id, dbOperators: groups[1].id, integrationServices: groups[2].id };
 
 const groupUsers = [
   { group_id: ids.groups.rdpAdmins, user_id: ids.users.admin },
@@ -188,9 +189,9 @@ const passwordRotationHistory = [
 
 // Access Policies: Group → Safe → Listener (core Fudo access control)
 const accessPolicies = [
-  { id: uuidv4(), name: 'IT-Admin Full Access', group_id: ids.groups.rdpAdmins, group_name: 'RDP-Server-Admins', safe_id: ids.safes.itAdmin, safe_name: 'IT-Administration', listener_id: ids.listeners.rdp, listener_name: 'RDP-Listener', time_restriction: null, require_approval: false, max_duration_hours: null, record_session: true, status: 'active', created_at: '2024-02-01T08:00:00Z', modified_at: now },
-  { id: uuidv4(), name: 'DB Team App Access', group_id: ids.groups.dbOperators, group_name: 'DB-Operators', safe_id: ids.safes.appAccess, safe_name: 'Application-Access', listener_id: ids.listeners.ssh, listener_name: 'SSH-Listener', time_restriction: { days: ['mon','tue','wed','thu','fri'], start: '08:00', end: '18:00' }, require_approval: false, max_duration_hours: 8, record_session: true, status: 'active', created_at: '2024-03-15T08:00:00Z', modified_at: now },
-  { id: uuidv4(), name: 'Integration Services', group_id: ids.groups.integrationServices, group_name: 'Integration-Services', safe_id: ids.safes.itAdmin, safe_name: 'IT-Administration', listener_id: null, listener_name: null, time_restriction: null, require_approval: false, max_duration_hours: 2, record_session: true, status: 'active', created_at: '2025-06-01T10:00:00Z', modified_at: now },
+  { id: ids.policies.itAdminFull, name: 'IT-Admin Full Access', group_id: ids.groups.rdpAdmins, group_name: 'RDP-Server-Admins', safe_id: ids.safes.itAdmin, safe_name: 'IT-Administration', listener_id: ids.listeners.rdp, listener_name: 'RDP-Listener', time_restriction: null, require_approval: false, max_duration_hours: null, record_session: true, status: 'active', created_at: '2024-02-01T08:00:00Z', modified_at: now },
+  { id: ids.policies.dbTeamApp, name: 'DB Team App Access', group_id: ids.groups.dbOperators, group_name: 'DB-Operators', safe_id: ids.safes.appAccess, safe_name: 'Application-Access', listener_id: ids.listeners.ssh, listener_name: 'SSH-Listener', time_restriction: { days: ['mon','tue','wed','thu','fri'], start: '08:00', end: '18:00' }, require_approval: false, max_duration_hours: 8, record_session: true, status: 'active', created_at: '2024-03-15T08:00:00Z', modified_at: now },
+  { id: ids.policies.integration, name: 'Integration Services', group_id: ids.groups.integrationServices, group_name: 'Integration-Services', safe_id: ids.safes.itAdmin, safe_name: 'IT-Administration', listener_id: null, listener_name: null, time_restriction: null, require_approval: false, max_duration_hours: 2, record_session: true, status: 'active', created_at: '2025-06-01T10:00:00Z', modified_at: now },
 ];
 
 module.exports = { users, servers, accounts, safes, safeUsers, safeAccounts, accountManagers, listeners, pools, sessions, authMethods, groups, groupUsers, groupSafes, accessPolicies, userDirectoryConfig, events, passwordPolicies, accessRequests, webhooks, passwordRotationHistory, ids };

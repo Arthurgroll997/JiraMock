@@ -24,7 +24,7 @@ export interface ConnectorAction {
 export interface ActionParam {
   id: string;
   label: string;
-  type: 'text' | 'number' | 'select' | 'duration';
+  type: 'text' | 'number' | 'select' | 'duration' | 'hidden';
   placeholder?: string;
   required?: boolean;
   default?: string;

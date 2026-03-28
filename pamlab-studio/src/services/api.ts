@@ -45,11 +45,26 @@ export async function apiFetch(url: string, method: string, body?: unknown): Pro
     'Content-Type': 'application/json',
     ...authHeader(settings),
   };
+  // Convert string booleans and numbers in body to proper types
+  let processedBody = body;
+  if (body && typeof body === 'object' && !Array.isArray(body)) {
+    const obj = body as Record<string, unknown>;
+    processedBody = Object.fromEntries(
+      Object.entries(obj).map(([k, v]) => {
+        if (v === 'true') return [k, true];
+        if (v === 'false') return [k, false];
+        if (typeof v === 'string' && /^\d+$/.test(v) && ['max_duration_hours', 'duration_hours', 'port'].includes(k)) return [k, parseInt(v)];
+        // Handle JSON array strings (from members = @("item"))
+        if (typeof v === 'string' && v.startsWith('[')) { try { return [k, JSON.parse(v)]; } catch { /* keep string */ } }
+        return [k, v];
+      })
+    );
+  }
   try {
     const res = await fetch(url, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: processedBody ? JSON.stringify(processedBody) : undefined,
       signal: AbortSignal.timeout(10000),
     });
     const time = Math.round(performance.now() - start);

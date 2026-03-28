@@ -130,6 +130,12 @@ function parseHashtable(lines: string[]): Record<string, string> {
   const result: Record<string, string> = {};
   for (const line of lines) {
     if (!line || line.startsWith('#')) continue;
+    // Match PowerShell boolean: key = $true / $false
+    const boolM = line.match(/^(\w+)\s*=\s*\$(\w+)\s*;?\s*$/);
+    if (boolM) {
+      result[boolM[1]] = boolM[2] === 'true' ? 'true' : 'false';
+      continue;
+    }
     // Match: key = "value" or key = 'value' or key = value
     const m = line.match(/^(\w+)\s*=\s*["']?([^"'\n;]*)["']?\s*;?\s*$/);
     if (m) {
