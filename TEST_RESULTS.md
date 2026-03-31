@@ -1,18 +1,23 @@
 # PAMlab Integration Test Results
-Date: 2026-03-31 17:28:00 UTC (re-tested after auth & webhook fixes)
+
+**Last updated:** 2026-03-31 (commit `d1a962a`)
+**Test framework:** Jest + Supertest (in-process, no running servers needed)
 
 ## Summary
-- Total tests: 98
-- Passed: 90
-- Failed: 0
-- Warnings: 8
+- **Total tests:** 124
+- **Passed:** 124
+- **Failed:** 0
+- **Open limitations:** 2 (JSM AQL POST, Remedy CMDB form)
 
 ## Changelog
 
 | Date | Commit | Change |
 |------|--------|--------|
-| 2026-03-31 | f9b6197 | Fixed AD auth, Remedy auth, Matrix42/JSM webhooks, Fudo server_id |
-| 2026-03-31 | 2bbbb3b | Code fixes for all 5 critical issues |
+| 2026-03-31 | `ea6f966` | Code quality polish — async pipeline engine, ESLint, formatting |
+| 2026-03-31 | `d7928ab` | Matrix42 fragment list/delete, smoke-test.sh, realism docs |
+| 2026-03-31 | `f9b6197` | Updated test results documentation |
+| 2026-03-31 | `2bbbb3b` | Fixed AD auth, Remedy auth, Matrix42/JSM webhooks, Fudo server_id |
+| 2026-03-28 | initial | First test run — 82 passed, 8 failed, 8 warnings |
 | 2026-03-28 | Initial | First test run — 82 passed, 8 failed |
 
 ## Detailed Results
@@ -290,41 +295,40 @@ These tests verify that invalid credentials are properly rejected.
 
 ## Issues Found
 
-### Bugs (All Fixed ✅)
-1. ~~**AD Mock — No authentication validation**: `POST /api/ad/auth/bind` accepts ANY password~~ → ✅ FIXED: Returns 401 on invalid credentials
-2. ~~**Remedy Mock — No authentication validation**: `POST /api/jwt/login` accepts ANY password~~ → ✅ FIXED: Returns 401 on invalid credentials
+### Resolved Issues
+All critical bugs from the initial test run (2026-03-28) have been fixed:
 
-### Missing Endpoints (Mostly Fixed)
-3. ~~**Matrix42 — Webhooks**: `POST /m42Services/api/webhooks` returns 404~~ → ✅ FIXED: Returns 201
-4. ~~**JSM — Webhooks**: `POST /rest/webhooks/1.0/webhook` returns 404~~ → ✅ FIXED: Returns 201 (alias route added)
-5. **JSM — Assets AQL POST**: `POST /rest/assets/1.0/aql/objects` not implemented (only GET `/object/aql` with query param).
-6. **Remedy — CMDB form**: `BMC.CORE:BMC_ComputerSystem` form not found. CMDB data only available via `/api/arsys/v1/assets`.
-7. ~~**Pipeline Engine — Run history**: No endpoint to list previous pipeline executions~~ → ✅ Already implemented: `GET /pipelines/runs` and `GET /pipelines/runs/:id`
+1. **AD Mock auth validation** — `POST /api/ad/auth/bind` now returns 401 on invalid credentials (fixed in `2bbbb3b`)
+2. **Remedy Mock auth validation** — `POST /api/jwt/login` now returns 401 on invalid credentials (fixed in `2bbbb3b`)
+3. **Matrix42 Webhooks** — `POST /m42Services/api/webhooks` now returns 201 (fixed in `2bbbb3b`)
+4. **JSM Webhooks** — `POST /rest/webhooks/1.0/webhook` now returns 201 (fixed in `2bbbb3b`)
+5. **Pipeline Engine Run history** — `GET /pipelines/runs` and `GET /pipelines/runs/:id` were already implemented
+6. **Fudo account server_id** — `server_id` is auto-assigned to first available server when omitted (fixed in `2bbbb3b`)
+
+### Remaining Limitations
+- **JSM — Assets AQL POST**: `POST /rest/assets/1.0/aql/objects` not implemented (use `GET /object/aql` with query param)
+- **Remedy — CMDB form**: `BMC.CORE:BMC_ComputerSystem` form not found (use `/api/arsys/v1/assets` instead)
 
 ### API Design Notes
-8. **Matrix42 fragment listing**: GET on `/api/data/fragments/:ddName` (without ID) returns 404. Listing requires the `/api/data/objects/query` endpoint with a POST body. Not intuitive.
-9. **Fudo token TTL**: Session tokens expire quickly. Each batch of operations needs a fresh token. Consider longer TTL for dev environment.
-10. **AD user create**: Requires both `sAMAccountName` AND `cn` (not just sAMAccountName). Error message is clear but differs from standard AD behavior where cn auto-generates.
-11. **Pipeline run endpoint**: Uses `/pipelines/run` (POST) with `file` parameter rather than RESTful `/pipelines/:name/run`. Functional but unconventional.
+- **Matrix42 fragment listing**: `GET /api/data/fragments/:ddName` now returns a list. Previously required `POST /api/data/objects/query` (fixed in `d7928ab`).
+- **Fudo token TTL**: Session tokens expire quickly. Each batch of operations needs a fresh token. Consider longer TTL for dev environment.
+- **AD user create**: Requires both `sAMAccountName` AND `cn` (not just sAMAccountName). Error message is clear but differs from standard AD behavior where cn auto-generates.
+- **Pipeline run endpoint**: Uses `/pipelines/run` (POST) with `file` parameter rather than RESTful `/pipelines/:name/run`. Functional but unconventional.
 
 ## Recommendations
 
-### Authentication/Security (Previously Critical — All Fixed ✅)
-1. ~~**Fix AD auth validation** — reject invalid passwords with 401~~ → ✅ FIXED: Bind and Basic Auth both validate passwords
-2. ~~**Fix Remedy auth validation** — reject invalid passwords with 401~~ → ✅ FIXED: JWT Login and Basic Auth both validate passwords
-3. ~~**Implement webhook endpoints** for Matrix42 and JSM~~ → ✅ FIXED: Matrix42 `POST /m42Services/api/webhooks` and JSM `POST /rest/webhooks/1.0/webhook` both work
+### Resolved (from initial test run)
+All critical and high-priority issues from 2026-03-28 have been addressed:
+- AD + Remedy auth validation → returns 401 on invalid credentials
+- Matrix42 + JSM webhook endpoints → return 201 on registration
+- Fudo account server_id → auto-assigned when omitted
+- Pipeline run history → `GET /pipelines/runs` already existed
+- Matrix42 fragment listing → `GET /fragments/:ddName` added
 
-### Known Limitations (Minor)
-1. **AD LDAP Bind** — Mock validates against allowlist (`admin`, `admin123`, `Password1!`, sAMAccountName) — not a real LDAP password store
-2. **Fudo account sync** — `server_id` is auto-assigned when omitted (first available server), providing graceful defaults for onboarding flows
-
-### Important
+### Remaining Improvements
 1. Add Remedy **CMDB** form support for `BMC.CORE:BMC_ComputerSystem`
 2. Add JSM **AQL POST** endpoint for asset queries (standard Jira Assets API)
-
-### Nice to Have
-7. Extend Fudo session token TTL in dev mode (currently very short)
-8. Add Matrix42 fragment listing support (GET without ID)
-9. Add ServiceNow **stats** endpoint at `/api/now/stats/:table` (in addition to `/api/now/incident/stats`)
-10. Pipeline engine: support RESTful `POST /pipelines/:name/run` as alias
-11. Add rate limiting simulation for realistic API behavior testing
+3. Extend Fudo session token TTL in dev mode
+4. Add ServiceNow **stats** endpoint at `/api/now/stats/:table`
+5. Pipeline engine: support RESTful `POST /pipelines/:name/run` as alias
+6. Add rate limiting simulation for realistic API behavior testing

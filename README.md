@@ -53,7 +53,7 @@ cd PAMlab
 docker-compose up
 ```
 
-This starts **all 8 services**. Open [http://localhost:3000](http://localhost:3000) for PAMlab Studio.
+This starts **all services** (6 mock APIs + pipeline engine + web IDE). Open [http://localhost:3000](http://localhost:3000) for PAMlab Studio.
 
 ### Option 2: Manual (Run Each Service Individually)
 
@@ -186,7 +186,7 @@ That's it — the core onboarding path works. The [full workflow](#-your-first-w
 
 ## 📋 Architecture Overview
 
-PAMlab is a **developer sandbox** for building and testing enterprise access management integrations. It simulates a local IT environment with **six interconnected mock APIs**, a pipeline engine, and a web-based IDE:
+PAMlab is a **developer sandbox** for building and testing enterprise access management integrations. It provides **six mock APIs** (plus an optional CyberArk mock), a pipeline engine, and a web-based IDE:
 
 | System | What it simulates | Port | Endpoints |
 |--------|-------------------|------|-----------|
@@ -1128,7 +1128,7 @@ Switch-PAMlabEnv -Environment production
 
 ## 🔗 Pipeline Engine (Port 8446)
 
-The Pipeline Engine orchestrates workflows across **all six mock APIs** using YAML-based pipeline definitions.
+The Pipeline Engine orchestrates workflows across **all mock APIs** using YAML-based pipeline definitions.
 
 ```bash
 # Run a pipeline via CLI
@@ -1328,7 +1328,7 @@ Security Alert    Fudo PAM        Active Directory    Matrix42 / SNOW / JSM
 
 ## 🧪 Testing
 
-PAMlab ships with **145 automated tests** across all 8 services, plus validated integration scenarios. Tests use [Jest](https://jestjs.io/) + [Supertest](https://github.com/ladjs/supertest) and run in-process — no servers to start.
+PAMlab ships with **145 automated tests** across all services, plus validated integration scenarios. Tests use [Jest](https://jestjs.io/) + [Supertest](https://github.com/ladjs/supertest) and run in-process — no servers to start.
 
 ### Quick Start (New Developer)
 
