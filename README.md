@@ -1050,18 +1050,64 @@ Security Alert    Fudo PAM        Active Directory    Matrix42 / SNOW / JSM
 
 ## 🧪 Testing
 
-PAMlab includes a comprehensive test suite with **145 automated tests** across all 8 services. Tests use [Jest](https://jestjs.io/) + [Supertest](https://github.com/ladjs/supertest) and run without starting any servers — everything is tested in-process.
+PAMlab ships with **145 automated tests** across all 8 services, plus validated integration scenarios. Tests use [Jest](https://jestjs.io/) + [Supertest](https://github.com/ladjs/supertest) and run in-process — no servers to start.
 
-### Run All Tests
+### Quick Start (New Developer)
 
 ```bash
-# Run tests for a single service
-cd fudo-mock-api && npm test
+# 1. Clone the repo
+git clone https://github.com/BenediktSchackenberg/PAMlab.git
+cd PAMlab
 
-# Run tests for ALL services (from repo root)
-for dir in fudo-mock-api matrix42-mock-api ad-mock-api servicenow-mock-api jsm-mock-api remedy-mock-api pipeline-engine cyberark-mock-api; do
-  echo "=== Testing $dir ===" && cd $dir && npm test && cd ..
-done
+# 2. Run ALL tests (installs dependencies automatically)
+./scripts/test-all.sh --install
+
+# That's it! You should see 145 tests pass across 8 services.
+```
+
+### Run Tests Individually
+
+```bash
+# Test a single service
+cd fudo-mock-api
+npm install
+npm test
+
+# Test another service
+cd ../cyberark-mock-api
+npm install
+npm test
+```
+
+### Where Are the Tests?
+
+```
+PAMlab/
+├── fudo-mock-api/
+│   ├── __tests__/api.test.js      ← Main test file (23 tests)
+│   └── test/health.test.js        ← Health endpoint test
+├── matrix42-mock-api/
+│   ├── __tests__/api.test.js      ← Main test file (19 tests)
+│   └── test/health.test.js
+├── ad-mock-api/
+│   ├── __tests__/api.test.js      ← 14 tests
+│   └── test/health.test.js
+├── servicenow-mock-api/
+│   ├── __tests__/api.test.js      ← 15 tests
+│   └── test/health.test.js
+├── jsm-mock-api/
+│   ├── __tests__/api.test.js      ← 15 tests
+│   └── test/health.test.js
+├── remedy-mock-api/
+│   ├── __tests__/api.test.js      ← 16 tests
+│   └── test/health.test.js
+├── pipeline-engine/
+│   ├── __tests__/api.test.js      ← 15 tests
+│   └── test/health.test.js
+├── cyberark-mock-api/
+│   └── __tests__/cyberark.test.js ← 21 tests
+└── scripts/
+    └── test-all.sh                ← Run everything at once
 ```
 
 ### Test Coverage by Service
@@ -1079,56 +1125,95 @@ done
 
 **Total: 145 tests**
 
-### What the Tests Validate
+### What Every Test Suite Covers
 
-Each service test suite covers four areas:
+Each service is tested across four areas:
 
-1. **Authentication** — Login flows, token generation, rejection of invalid credentials, protection of routes without auth
-2. **CRUD Operations** — Create, Read, Update, Delete for all primary resources with correct status codes
-3. **Seed Data** — Verification that initial data is present and correctly structured after startup
-4. **Error Handling** — 400 (bad input), 401 (no auth), 404 (not found), and domain-specific errors
+| Area | What's Checked | Example |
+|------|---------------|---------|
+| 🔐 **Authentication** | Login flows, token generation, invalid credentials, route protection | `POST /api/v2/auth/login` with wrong password → 401 |
+| 📝 **CRUD Operations** | Create, Read, Update, Delete with correct status codes and response shapes | `POST /api/ad/users` → 201, `GET /api/ad/users/:sam` → 200 |
+| 🌱 **Seed Data** | Verify pre-loaded data is present and correctly structured | Fudo starts with 10 users, 6 servers, 4 safes |
+| ⚠️ **Error Handling** | 400 (bad input), 401 (no auth), 404 (not found), domain-specific errors | `GET /api/ad/users/nonexistent` → 404 |
 
 ### Integration Test Scenarios
 
-Beyond unit tests, PAMlab has been validated with end-to-end integration scenarios that exercise cross-service workflows — the same workflows you'd build in production:
+Beyond unit tests, PAMlab has been validated with real-world cross-service workflows — the same patterns you'd use in production:
 
 **Scenario 1: Employee Onboarding** (8 steps across 6 systems)
 ```
-Matrix42 (ticket) → AD (create user) → AD (add to group) → Fudo (create user)
+Matrix42 (access request) → AD (create user) → AD (add to group) → Fudo (create user)
 → CyberArk (create account) → ServiceNow (change request) → JSM (tracking issue)
-→ Verify user exists in AD
+→ Verify: user exists in AD with correct group membership
 ```
 
 **Scenario 2: Emergency Access Revocation** (6 steps across 5 systems)
 ```
-Fudo (find active session) → AD (disable user) → CyberArk (rotate password)
-→ ServiceNow (security incident) → JSM (audit issue) → Remedy (incident)
+Fudo (find active session) → AD (disable user account) → CyberArk (rotate password)
+→ ServiceNow (P1 security incident) → JSM (audit issue) → Remedy (incident ticket)
 ```
 
 **Scenario 3: CyberArk Password Rotation** (4 steps)
 ```
-Search accounts → Retrieve password (checkout) → CheckIn → Verify
+Search accounts → Retrieve password (checkout) → CheckIn → Verify credentials
 ```
 
 **Scenario 4: Cross-ITSM Incident Flow** (4 steps across 3 systems)
 ```
 ServiceNow (create incident) → JSM (create issue) → Remedy (create incident)
-→ ServiceNow (close incident)
+→ ServiceNow (resolve + close incident)
 ```
 
-All integration scenarios pass successfully with correct data propagation across services.
+### Writing New Tests
+
+Adding tests for a new endpoint? Here's the pattern every service follows:
+
+```javascript
+// __tests__/api.test.js
+const request = require('supertest');
+const app = require('../src/server');  // Express app — no server.listen needed
+
+describe('My Mock API', () => {
+  let token;
+
+  // Get auth token before tests (adjust per service)
+  beforeAll(async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'admin', password: 'admin123' });
+    token = res.body.token;
+  });
+
+  test('GET /api/resource returns list', async () => {
+    const res = await request(app)
+      .get('/api/resource')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  test('GET /api/resource without auth returns 401', async () => {
+    const res = await request(app).get('/api/resource');
+    expect(res.status).toBe(401);
+  });
+});
+```
+
+Key points:
+- Import the Express `app` directly — Supertest handles the HTTP layer
+- Each service exports `app` from `src/server.js` via `module.exports = app`
+- Use `--forceExit --detectOpenHandles` flags (already configured in each `package.json`)
+- Auth patterns differ per service — check existing tests for the correct login flow
 
 ### CI/CD
 
 Tests run automatically via GitHub Actions on every push and pull request:
 
-- **Matrix:** Node.js 18 + 20
-- **Pipeline:** Install → Lint → Test → Docker Build
-- **Docker Publish:** Multi-arch images (amd64 + arm64) pushed to `ghcr.io` on tagged releases
+- **Node.js Matrix:** Tests run on Node 18 and Node 20
+- **Pipeline:** Install → Test → Docker Build verification
+- **Docker Publish:** On tagged releases, multi-arch images (amd64 + arm64) are published to `ghcr.io`
 
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for the full pipeline configuration.
-
----
 
 ## 🗺️ Roadmap
 
