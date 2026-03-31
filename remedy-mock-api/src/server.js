@@ -53,9 +53,13 @@ app.use((req, res) => {
 // Seed data
 seed();
 
-app.listen(PORT, () => {
+if (require.main === module) app.listen(PORT, () => {
   console.log(`BMC Remedy Mock API running on port ${PORT}`);
   console.log(`Health: http://localhost:${PORT}/health`);
   console.log(`JWT Login: POST http://localhost:${PORT}/api/jwt/login`);
   console.log(`Entry API: http://localhost:${PORT}/api/arsys/v1/entry/{formName}`);
 });
+
+module.exports = app;
+
+module.exports = app;

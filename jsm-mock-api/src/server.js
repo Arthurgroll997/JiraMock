@@ -53,7 +53,11 @@ app.use((req, res) => {
 // Seed data
 seed();
 
-app.listen(PORT, () => {
+if (require.main === module) app.listen(PORT, () => {
   console.log(`JSM Mock API running on port ${PORT}`);
   console.log(`Health: http://localhost:${PORT}/health`);
 });
+
+module.exports = app;
+
+module.exports = app;

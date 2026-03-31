@@ -32,4 +32,8 @@ app.post('/reset', (req, res) => {
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'ad-mock-api', domain: 'corp.local' }));
 
 const PORT = process.env.PORT || 8445;
-app.listen(PORT, () => console.log(`AD Mock API running on port ${PORT} (corp.local)`));
+if (require.main === module) app.listen(PORT, () => console.log(`AD Mock API running on port ${PORT} (corp.local)`));
+
+module.exports = app;
+
+module.exports = app;

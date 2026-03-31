@@ -72,6 +72,10 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Not Found', path: req.path });
 });
 
-app.listen(PORT, () => {
+if (require.main === module) app.listen(PORT, () => {
   console.log(`Matrix42 ESM Mock API running on port ${PORT}`);
 });
+
+module.exports = app;
+
+module.exports = app;

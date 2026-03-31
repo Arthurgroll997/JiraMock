@@ -61,7 +61,11 @@ app.get('/health', (req, res) => res.json({ status: 'ok', service: 'fudo-mock-ap
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Not Found', message: `Route ${req.method} ${req.path} not found` }));
 
-app.listen(PORT, () => {
+if (require.main === module) app.listen(PORT, () => {
   console.log(`🔐 Fudo PAM Mock API v2 running on http://localhost:${PORT}`);
   console.log(`   Login: POST /api/v2/auth/login {"login":"admin","password":"admin123"}`);
 });
+
+module.exports = app;
+
+module.exports = app;

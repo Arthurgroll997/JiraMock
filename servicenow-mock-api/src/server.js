@@ -50,8 +50,12 @@ app.use((req, res) => {
 // Seed data
 seed();
 
-app.listen(PORT, () => {
+if (require.main === module) app.listen(PORT, () => {
   console.log(`ServiceNow Mock API running on port ${PORT}`);
   console.log(`Health: http://localhost:${PORT}/health`);
   console.log(`Table API: http://localhost:${PORT}/api/now/table/{tableName}`);
 });
+
+module.exports = app;
+
+module.exports = app;
