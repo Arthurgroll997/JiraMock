@@ -7,12 +7,13 @@ import { prepareTestRun, executeCleanup, trackCreatedResources, type CleanupPlan
 import { loadProductionConfig } from '../services/productionConfig';
 import { resolveStepReferences, extractIds, type StepResults } from '../services/stepResolver';
 
-export default function CodeEditor({ script, onScriptChange, onResults, onNavigate }: {
+export default function CodeEditor({ script, onScriptChange, onResults, onNavigate: _onNavigate }: {
   script: string;
   onScriptChange: (s: string) => void;
   onResults: (steps: StepResultType[], traffic: ApiResult[]) => void;
   onNavigate?: (p: Page) => void;
 }) {
+  void _onNavigate;
   const [running, setRunning] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [debugStep, setDebugStep] = useState(0);
@@ -378,7 +379,7 @@ export default function CodeEditor({ script, onScriptChange, onResults, onNaviga
                         {s.result.status} {s.result.statusText}
                       </span>
                       <span className="text-gray-500 ml-2">{s.result.time}ms</span>
-                      {s.result.responseBody && (
+                      {s.result.responseBody != null && (
                         <pre className="mt-2 p-2 bg-gray-950 rounded text-gray-400 overflow-x-auto max-h-32">
                           {JSON.stringify(s.result.responseBody, null, 2).slice(0, 500)}
                         </pre>

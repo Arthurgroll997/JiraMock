@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-services:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20]
+        service:
+          - ad-mock-api
+          - fudo-mock-api
+          - jsm-mock-api
+          - matrix42-mock-api
+          - remedy-mock-api
+          - servicenow-mock-api
+          - pipeline-engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: ${{ matrix.service }}/package-lock.json
+      - name: Install dependencies
+        working-directory: ${{ matrix.service }}
+        run: npm ci || npm install
+      - name: Run tests
+        working-directory: ${{ matrix.service }}
+        run: npm test
+
+  build-studio:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: pamlab-studio/package-lock.json
+      - name: Install dependencies
+        working-directory: pamlab-studio
+        run: npm ci || npm install
+      - name: Lint
+        working-directory: pamlab-studio
+        run: npm run lint
+      - name: Build
+        working-directory: pamlab-studio
+        run: npm run build
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [test-services, build-studio]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build all Docker images
+        run: docker compose build

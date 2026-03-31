@@ -57,6 +57,33 @@ router.get('/objects/:ddName/:objectId', (req, res) => {
   res.json(obj);
 });
 
+// POST query objects (must be before :ddName route)
+router.post('/objects/query', (req, res) => {
+  const { ddName, columns, filter, pageSize = 50, page = 1 } = req.body;
+  const list = store.objects[ddName];
+  if (!list) return res.status(404).json({ error: `Unknown DD: ${ddName}` });
+  
+  let results = [...list];
+  if (filter) {
+    const f = filter.toLowerCase();
+    results = results.filter(o => JSON.stringify(o).toLowerCase().includes(f));
+  }
+  
+  const total = results.length;
+  const start = (page - 1) * pageSize;
+  results = results.slice(start, start + pageSize);
+  
+  if (columns && columns.length > 0) {
+    results = results.map(o => {
+      const picked = {};
+      columns.forEach(c => { if (o[c] !== undefined) picked[c] = o[c]; });
+      return picked;
+    });
+  }
+  
+  res.json({ Total: total, Page: page, PageSize: pageSize, Columns: columns || Object.keys(list[0] || {}), Data: results });
+});
+
 // POST create object
 router.post('/objects/:ddName', (req, res) => {
   const { ddName } = req.params;
@@ -86,33 +113,6 @@ router.delete('/objects/:ddName/:objectId', (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'Object not found' });
   const deleted = list.splice(idx, 1)[0];
   res.json({ deleted: true, object: deleted });
-});
-
-// POST query objects
-router.post('/objects/query', (req, res) => {
-  const { ddName, columns, filter, pageSize = 50, page = 1 } = req.body;
-  const list = store.objects[ddName];
-  if (!list) return res.status(404).json({ error: `Unknown DD: ${ddName}` });
-  
-  let results = [...list];
-  if (filter) {
-    const f = filter.toLowerCase();
-    results = results.filter(o => JSON.stringify(o).toLowerCase().includes(f));
-  }
-  
-  const total = results.length;
-  const start = (page - 1) * pageSize;
-  results = results.slice(start, start + pageSize);
-  
-  if (columns && columns.length > 0) {
-    results = results.map(o => {
-      const picked = {};
-      columns.forEach(c => { if (o[c] !== undefined) picked[c] = o[c]; });
-      return picked;
-    });
-  }
-  
-  res.json({ Total: total, Page: page, PageSize: pageSize, Columns: columns || Object.keys(list[0] || {}), Data: results });
 });
 
 module.exports = router;

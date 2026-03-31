@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { Page } from '../types';
-import { workflowTemplates } from '../data/workflowTemplates';
 
 interface WelcomeProps {
   onNavigate: (p: Page) => void;

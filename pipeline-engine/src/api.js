@@ -147,7 +147,7 @@ app.get('/connectors/:name/actions', (req, res) => {
 });
 
 // --- Server starten ---
-app.listen(PORT, () => {
+if (require.main === module) app.listen(PORT, () => {
   console.log(`\n🔗 PAMlab Pipeline Engine läuft auf Port ${PORT}`);
   console.log(`   Connectors: ${registry.list().join(', ')}`);
   console.log(`   Pipelines:  ${PIPELINES_DIR}`);
