@@ -30,13 +30,13 @@ class StepExecutor {
         const ms = this._parseDuration(duration);
         console.log(`  ⏳ [${stepName}] Warte ${duration}...`);
         if (!dryRun) {
-          await new Promise(resolve => setTimeout(resolve, Math.min(ms, 5000))); // Max 5s im Test
+          await new Promise((resolve) => setTimeout(resolve, Math.min(ms, 5000))); // Max 5s im Test
         }
         return {
           status: 'success',
           action: 'wait',
           duration,
-          durationMs: Date.now() - startTime
+          durationMs: Date.now() - startTime,
         };
       }
 
@@ -65,15 +65,14 @@ class StepExecutor {
         status: 'success',
         action: `${step.system}.${action}`,
         result,
-        durationMs: Date.now() - startTime
+        durationMs: Date.now() - startTime,
       };
-
     } catch (error) {
       return {
         status: 'failed',
         action: step.action ? `${step.system}.${step.action}` : step.action,
         error: error.message,
-        durationMs: Date.now() - startTime
+        durationMs: Date.now() - startTime,
       };
     }
   }
@@ -85,13 +84,19 @@ class StepExecutor {
     if (typeof assertion === 'boolean') {
       // assert: true → Ergebnis muss truthy sein
       const passed = assertion ? !!result : !result;
-      return { passed, message: passed ? 'OK' : `Erwartet ${assertion}, erhalten: ${JSON.stringify(result)}` };
+      return {
+        passed,
+        message: passed ? 'OK' : `Erwartet ${assertion}, erhalten: ${JSON.stringify(result)}`,
+      };
     }
     if (typeof assertion === 'object') {
       // assert: { status: "active" } → Felder prüfen
       for (const [key, expected] of Object.entries(assertion)) {
         if (result[key] !== expected) {
-          return { passed: false, message: `${key}: erwartet "${expected}", erhalten "${result[key]}"` };
+          return {
+            passed: false,
+            message: `${key}: erwartet "${expected}", erhalten "${result[key]}"`,
+          };
         }
       }
       return { passed: true, message: 'OK' };

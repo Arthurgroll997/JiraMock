@@ -13,14 +13,17 @@ function now() {
 
 // Fire webhooks on changes
 function fireWebhooks(tableName, action, record) {
-  store.webhooks.forEach(wh => {
+  store.webhooks.forEach((wh) => {
     if (wh.table === tableName || wh.table === '*') {
       try {
         const payload = JSON.stringify({ table: tableName, action, sys_id: record.sys_id, record });
         // Fire-and-forget HTTP POST (best effort, no external deps)
         const url = new URL(wh.url);
         const mod = url.protocol === 'https:' ? require('https') : require('http');
-        const req = mod.request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        const req = mod.request(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
         req.on('error', () => {});
         req.write(payload);
         req.end();
@@ -51,7 +54,7 @@ function parseQuery(queryStr) {
     }
   }
 
-  const filters = conditions.map(cond => {
+  const filters = conditions.map((cond) => {
     // Support operators: !=, LIKE, STARTSWITH, ENDSWITH, IN, =
     let m;
     if ((m = cond.match(/^(.+?)!=(.*)$/))) {
@@ -59,15 +62,24 @@ function parseQuery(queryStr) {
     }
     if ((m = cond.match(/^(.+?)LIKE(.*)$/))) {
       const val = m[2].toLowerCase();
-      return (r) => String(r[m[1]] ?? '').toLowerCase().includes(val);
+      return (r) =>
+        String(r[m[1]] ?? '')
+          .toLowerCase()
+          .includes(val);
     }
     if ((m = cond.match(/^(.+?)STARTSWITH(.*)$/))) {
       const val = m[2].toLowerCase();
-      return (r) => String(r[m[1]] ?? '').toLowerCase().startsWith(val);
+      return (r) =>
+        String(r[m[1]] ?? '')
+          .toLowerCase()
+          .startsWith(val);
     }
     if ((m = cond.match(/^(.+?)ENDSWITH(.*)$/))) {
       const val = m[2].toLowerCase();
-      return (r) => String(r[m[1]] ?? '').toLowerCase().endsWith(val);
+      return (r) =>
+        String(r[m[1]] ?? '')
+          .toLowerCase()
+          .endsWith(val);
     }
     if ((m = cond.match(/^(.+?)IN(.*)$/))) {
       const vals = m[2].split(',');
@@ -95,14 +107,16 @@ function parseQuery(queryStr) {
     return () => true;
   });
 
-  return { filter: (r) => filters.every(f => f(r)), orderBy, orderDesc };
+  return { filter: (r) => filters.every((f) => f(r)), orderBy, orderDesc };
 }
 
 function filterFields(record, fields) {
   if (!fields) return record;
-  const list = fields.split(',').map(f => f.trim());
+  const list = fields.split(',').map((f) => f.trim());
   const out = {};
-  list.forEach(f => { if (f in record) out[f] = record[f]; });
+  list.forEach((f) => {
+    if (f in record) out[f] = record[f];
+  });
   // Always include sys_id
   out.sys_id = record.sys_id;
   return out;
@@ -111,7 +125,10 @@ function filterFields(record, fields) {
 // GET /api/now/table/:tableName
 router.get('/:tableName', (req, res) => {
   const table = store.tables[req.params.tableName];
-  if (!table) return res.status(404).json({ error: { message: `Table '${req.params.tableName}' not found` } });
+  if (!table)
+    return res
+      .status(404)
+      .json({ error: { message: `Table '${req.params.tableName}' not found` } });
 
   const { sysparm_query, sysparm_fields, sysparm_limit, sysparm_offset } = req.query;
   const limit = parseInt(sysparm_limit) || 20;
@@ -135,7 +152,7 @@ router.get('/:tableName', (req, res) => {
   results = results.slice(offset, offset + limit);
 
   if (sysparm_fields) {
-    results = results.map(r => filterFields(r, sysparm_fields));
+    results = results.map((r) => filterFields(r, sysparm_fields));
   }
 
   res.set('X-Total-Count', String(total));
@@ -145,10 +162,16 @@ router.get('/:tableName', (req, res) => {
 // GET /api/now/table/:tableName/:sys_id
 router.get('/:tableName/:sys_id', (req, res) => {
   const table = store.tables[req.params.tableName];
-  if (!table) return res.status(404).json({ error: { message: `Table '${req.params.tableName}' not found` } });
+  if (!table)
+    return res
+      .status(404)
+      .json({ error: { message: `Table '${req.params.tableName}' not found` } });
 
-  const record = table.find(r => r.sys_id === req.params.sys_id);
-  if (!record) return res.status(404).json({ error: { message: 'Record not found', detail: `sys_id: ${req.params.sys_id}` } });
+  const record = table.find((r) => r.sys_id === req.params.sys_id);
+  if (!record)
+    return res
+      .status(404)
+      .json({ error: { message: 'Record not found', detail: `sys_id: ${req.params.sys_id}` } });
 
   const { sysparm_fields } = req.query;
   const result = sysparm_fields ? filterFields(record, sysparm_fields) : record;
@@ -177,13 +200,22 @@ router.post('/:tableName', (req, res) => {
 // PUT /api/now/table/:tableName/:sys_id
 router.put('/:tableName/:sys_id', (req, res) => {
   const table = store.tables[req.params.tableName];
-  if (!table) return res.status(404).json({ error: { message: `Table '${req.params.tableName}' not found` } });
+  if (!table)
+    return res
+      .status(404)
+      .json({ error: { message: `Table '${req.params.tableName}' not found` } });
 
-  const idx = table.findIndex(r => r.sys_id === req.params.sys_id);
+  const idx = table.findIndex((r) => r.sys_id === req.params.sys_id);
   if (idx === -1) return res.status(404).json({ error: { message: 'Record not found' } });
 
   const ts = now();
-  const updated = { ...req.body, sys_id: req.params.sys_id, sys_updated_on: ts, sys_created_on: table[idx].sys_created_on, sys_created_by: table[idx].sys_created_by };
+  const updated = {
+    ...req.body,
+    sys_id: req.params.sys_id,
+    sys_updated_on: ts,
+    sys_created_on: table[idx].sys_created_on,
+    sys_created_by: table[idx].sys_created_by,
+  };
   table[idx] = updated;
   fireWebhooks(req.params.tableName, 'update', updated);
   res.json({ result: updated });
@@ -192,9 +224,12 @@ router.put('/:tableName/:sys_id', (req, res) => {
 // PATCH /api/now/table/:tableName/:sys_id
 router.patch('/:tableName/:sys_id', (req, res) => {
   const table = store.tables[req.params.tableName];
-  if (!table) return res.status(404).json({ error: { message: `Table '${req.params.tableName}' not found` } });
+  if (!table)
+    return res
+      .status(404)
+      .json({ error: { message: `Table '${req.params.tableName}' not found` } });
 
-  const idx = table.findIndex(r => r.sys_id === req.params.sys_id);
+  const idx = table.findIndex((r) => r.sys_id === req.params.sys_id);
   if (idx === -1) return res.status(404).json({ error: { message: 'Record not found' } });
 
   const ts = now();
@@ -206,9 +241,12 @@ router.patch('/:tableName/:sys_id', (req, res) => {
 // DELETE /api/now/table/:tableName/:sys_id
 router.delete('/:tableName/:sys_id', (req, res) => {
   const table = store.tables[req.params.tableName];
-  if (!table) return res.status(404).json({ error: { message: `Table '${req.params.tableName}' not found` } });
+  if (!table)
+    return res
+      .status(404)
+      .json({ error: { message: `Table '${req.params.tableName}' not found` } });
 
-  const idx = table.findIndex(r => r.sys_id === req.params.sys_id);
+  const idx = table.findIndex((r) => r.sys_id === req.params.sys_id);
   if (idx === -1) return res.status(404).json({ error: { message: 'Record not found' } });
 
   const deleted = table.splice(idx, 1)[0];

@@ -12,32 +12,54 @@ router.get('/', (req, res) => {
 });
 
 router.get('/:id', (req, res) => {
-  const a = db.accounts.find(a => a.id === req.params.id);
+  const a = db.accounts.find((a) => a.id === req.params.id);
   if (!a) return res.status(404).json({ error: 'Not Found', message: 'Account not found' });
   res.json(a);
 });
 
 router.post('/', (req, res) => {
   const { name, login, server_id: rawServerId, type } = req.body || {};
-  if (!name || !login) return res.status(422).json({ error: 'Validation Error', message: 'name and login are required' });
+  if (!name || !login)
+    return res
+      .status(422)
+      .json({ error: 'Validation Error', message: 'name and login are required' });
   let server_id = rawServerId;
   if (!server_id) {
     if (db.servers.length > 0) {
       server_id = db.servers[0].id;
     } else {
-      return res.status(422).json({ error: 'Validation Error', message: 'No servers available to auto-assign' });
+      return res
+        .status(422)
+        .json({ error: 'Validation Error', message: 'No servers available to auto-assign' });
     }
   }
-  const server = db.servers.find(s => s.id === server_id);
-  if (!server) return res.status(422).json({ error: 'Validation Error', message: `Server not found. Valid server IDs: ${db.servers.map(s => s.id).join(', ')}` });
+  const server = db.servers.find((s) => s.id === server_id);
+  if (!server)
+    return res
+      .status(422)
+      .json({
+        error: 'Validation Error',
+        message: `Server not found. Valid server IDs: ${db.servers.map((s) => s.id).join(', ')}`,
+      });
   const now = new Date().toISOString();
-  const account = { id: uuidv4(), name, login, server_id, server_name: server.name, type: type || 'regular', status: 'active', password_change_required: false, created_at: now, modified_at: now };
+  const account = {
+    id: uuidv4(),
+    name,
+    login,
+    server_id,
+    server_name: server.name,
+    type: type || 'regular',
+    status: 'active',
+    password_change_required: false,
+    created_at: now,
+    modified_at: now,
+  };
   db.accounts.push(account);
   res.status(201).json(account);
 });
 
 router.put('/:id', (req, res) => {
-  const a = db.accounts.find(a => a.id === req.params.id);
+  const a = db.accounts.find((a) => a.id === req.params.id);
   if (!a) return res.status(404).json({ error: 'Not Found', message: 'Account not found' });
   const { name, login, status, type } = req.body || {};
   if (name !== undefined) a.name = name;
@@ -49,45 +71,58 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
-  const idx = db.accounts.findIndex(a => a.id === req.params.id);
+  const idx = db.accounts.findIndex((a) => a.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not Found', message: 'Account not found' });
   db.accounts.splice(idx, 1);
   res.status(204).end();
 });
 
 router.get('/:id/managers', (req, res) => {
-  if (!db.accounts.find(a => a.id === req.params.id)) return res.status(404).json({ error: 'Not Found', message: 'Account not found' });
-  const userIds = db.accountManagers.filter(m => m.account_id === req.params.id).map(m => m.user_id);
-  res.json({ items: db.users.filter(u => userIds.includes(u.id)) });
+  if (!db.accounts.find((a) => a.id === req.params.id))
+    return res.status(404).json({ error: 'Not Found', message: 'Account not found' });
+  const userIds = db.accountManagers
+    .filter((m) => m.account_id === req.params.id)
+    .map((m) => m.user_id);
+  res.json({ items: db.users.filter((u) => userIds.includes(u.id)) });
 });
 
 router.post('/:id/managers', (req, res) => {
-  if (!db.accounts.find(a => a.id === req.params.id)) return res.status(404).json({ error: 'Not Found', message: 'Account not found' });
+  if (!db.accounts.find((a) => a.id === req.params.id))
+    return res.status(404).json({ error: 'Not Found', message: 'Account not found' });
   const { user_id } = req.body || {};
-  if (!user_id || !db.users.find(u => u.id === user_id)) return res.status(422).json({ error: 'Validation Error', message: 'Valid user_id required' });
-  if (db.accountManagers.find(m => m.account_id === req.params.id && m.user_id === user_id)) return res.status(409).json({ error: 'Conflict', message: 'Already a manager' });
+  if (!user_id || !db.users.find((u) => u.id === user_id))
+    return res.status(422).json({ error: 'Validation Error', message: 'Valid user_id required' });
+  if (db.accountManagers.find((m) => m.account_id === req.params.id && m.user_id === user_id))
+    return res.status(409).json({ error: 'Conflict', message: 'Already a manager' });
   db.accountManagers.push({ account_id: req.params.id, user_id });
   res.status(201).json({ message: 'Manager added' });
 });
 
 router.delete('/:id/managers/:user_id', (req, res) => {
-  const idx = db.accountManagers.findIndex(m => m.account_id === req.params.id && m.user_id === req.params.user_id);
-  if (idx === -1) return res.status(404).json({ error: 'Not Found', message: 'Manager assignment not found' });
+  const idx = db.accountManagers.findIndex(
+    (m) => m.account_id === req.params.id && m.user_id === req.params.user_id,
+  );
+  if (idx === -1)
+    return res.status(404).json({ error: 'Not Found', message: 'Manager assignment not found' });
   db.accountManagers.splice(idx, 1);
   res.status(204).end();
 });
 
 router.get('/:id/safes', (req, res) => {
-  if (!db.accounts.find(a => a.id === req.params.id)) return res.status(404).json({ error: 'Not Found', message: 'Account not found' });
-  const safeIds = db.safeAccounts.filter(sa => sa.account_id === req.params.id).map(sa => sa.safe_id);
-  res.json({ items: db.safes.filter(s => safeIds.includes(s.id)) });
+  if (!db.accounts.find((a) => a.id === req.params.id))
+    return res.status(404).json({ error: 'Not Found', message: 'Account not found' });
+  const safeIds = db.safeAccounts
+    .filter((sa) => sa.account_id === req.params.id)
+    .map((sa) => sa.safe_id);
+  res.json({ items: db.safes.filter((s) => safeIds.includes(s.id)) });
 });
 
 router.post('/:id/password', (req, res) => {
-  const a = db.accounts.find(a => a.id === req.params.id);
+  const a = db.accounts.find((a) => a.id === req.params.id);
   if (!a) return res.status(404).json({ error: 'Not Found', message: 'Account not found' });
   const { password } = req.body || {};
-  if (!password) return res.status(422).json({ error: 'Validation Error', message: 'password is required' });
+  if (!password)
+    return res.status(422).json({ error: 'Validation Error', message: 'password is required' });
   a.password_change_required = false;
   a.modified_at = new Date().toISOString();
   res.json({ message: 'Password updated' });

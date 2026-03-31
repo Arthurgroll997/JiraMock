@@ -5,26 +5,51 @@ const router = express.Router();
 const BASE = `http://localhost:${process.env.PORT || 8448}`;
 
 function findIssue(idOrKey) {
-  return store.issues.find(i => i.id === idOrKey || i.key === idOrKey);
+  return store.issues.find((i) => i.id === idOrKey || i.key === idOrKey);
 }
 
 function formatIssue(issue) {
-  const comments = store.comments.filter(c => c.issueKey === issue.key);
-  const worklogs = store.worklogs.filter(w => w.issueKey === issue.key);
+  const comments = store.comments.filter((c) => c.issueKey === issue.key);
+  const worklogs = store.worklogs.filter((w) => w.issueKey === issue.key);
   return {
     id: issue.id,
     key: issue.key,
     self: `${BASE}/rest/api/2/issue/${issue.id}`,
     fields: {
       ...issue.fields,
-      comment: { total: comments.length, maxResults: comments.length, startAt: 0, comments: comments.map(c => ({ id: c.id, self: `${BASE}/rest/api/2/issue/${issue.key}/comment/${c.id}`, body: c.body, author: c.author, created: c.created, updated: c.updated })) },
-      worklog: { total: worklogs.length, maxResults: worklogs.length, startAt: 0, worklogs: worklogs.map(w => ({ id: w.id, self: `${BASE}/rest/api/2/issue/${issue.key}/worklog/${w.id}`, timeSpent: w.timeSpent, timeSpentSeconds: w.timeSpentSeconds, author: w.author, comment: w.comment, started: w.started })) },
+      comment: {
+        total: comments.length,
+        maxResults: comments.length,
+        startAt: 0,
+        comments: comments.map((c) => ({
+          id: c.id,
+          self: `${BASE}/rest/api/2/issue/${issue.key}/comment/${c.id}`,
+          body: c.body,
+          author: c.author,
+          created: c.created,
+          updated: c.updated,
+        })),
+      },
+      worklog: {
+        total: worklogs.length,
+        maxResults: worklogs.length,
+        startAt: 0,
+        worklogs: worklogs.map((w) => ({
+          id: w.id,
+          self: `${BASE}/rest/api/2/issue/${issue.key}/worklog/${w.id}`,
+          timeSpent: w.timeSpent,
+          timeSpentSeconds: w.timeSpentSeconds,
+          author: w.author,
+          comment: w.comment,
+          started: w.started,
+        })),
+      },
     },
   };
 }
 
 function fireWebhooks(event, issue) {
-  store.webhooks.forEach(wh => {
+  store.webhooks.forEach((wh) => {
     if (wh.events.includes(event) || wh.events.includes('*')) {
       console.log(`[WEBHOOK] Firing ${event} to ${wh.url} for ${issue.key}`);
     }
@@ -43,8 +68,12 @@ router.get('/:issueIdOrKey', (req, res) => {
 // POST /rest/api/2/issue - Create
 router.post('/', (req, res) => {
   const { fields } = req.body;
-  if (!fields || !fields.summary) return res.status(400).json({ errorMessages: ['Field "summary" is required'], errors: {} });
-  const projectKey = (fields.project && (fields.project.key || store.projects.find(p => p.id === fields.project.id)?.key)) || 'ITSM';
+  if (!fields || !fields.summary)
+    return res.status(400).json({ errorMessages: ['Field "summary" is required'], errors: {} });
+  const projectKey =
+    (fields.project &&
+      (fields.project.key || store.projects.find((p) => p.id === fields.project.id)?.key)) ||
+    'ITSM';
   if (!store.counters[projectKey]) store.counters[projectKey] = 0;
   store.counters[projectKey]++;
   const key = `${projectKey}-${store.counters[projectKey]}`;
@@ -59,9 +88,11 @@ router.post('/', (req, res) => {
       issuetype: fields.issuetype || { id: '1', name: 'Incident' },
       priority: fields.priority || { id: '3', name: 'Major' },
       status: { id: '1', name: 'Open' },
-      project: store.projects.find(p => p.key === projectKey),
+      project: store.projects.find((p) => p.key === projectKey),
       assignee: fields.assignee || null,
-      reporter: fields.reporter || (req.jiraUser ? { key: req.jiraUser.key, displayName: req.jiraUser.displayName } : null),
+      reporter:
+        fields.reporter ||
+        (req.jiraUser ? { key: req.jiraUser.key, displayName: req.jiraUser.displayName } : null),
       created: now,
       updated: now,
       labels: fields.labels || [],
@@ -88,8 +119,11 @@ router.put('/:issueIdOrKey', (req, res) => {
 
 // DELETE /rest/api/2/issue/:issueIdOrKey
 router.delete('/:issueIdOrKey', (req, res) => {
-  const idx = store.issues.findIndex(i => i.id === req.params.issueIdOrKey || i.key === req.params.issueIdOrKey);
-  if (idx === -1) return res.status(404).json({ errorMessages: ['Issue Does Not Exist'], errors: {} });
+  const idx = store.issues.findIndex(
+    (i) => i.id === req.params.issueIdOrKey || i.key === req.params.issueIdOrKey,
+  );
+  if (idx === -1)
+    return res.status(404).json({ errorMessages: ['Issue Does Not Exist'], errors: {} });
   store.issues.splice(idx, 1);
   res.status(204).send();
 });
@@ -98,7 +132,7 @@ router.delete('/:issueIdOrKey', (req, res) => {
 router.get('/:issueIdOrKey/comment', (req, res) => {
   const issue = findIssue(req.params.issueIdOrKey);
   if (!issue) return res.status(404).json({ errorMessages: ['Issue Does Not Exist'], errors: {} });
-  const comments = store.comments.filter(c => c.issueKey === issue.key);
+  const comments = store.comments.filter((c) => c.issueKey === issue.key);
   res.json({ startAt: 0, maxResults: comments.length, total: comments.length, comments });
 });
 
@@ -107,7 +141,14 @@ router.post('/:issueIdOrKey/comment', (req, res) => {
   const issue = findIssue(req.params.issueIdOrKey);
   if (!issue) return res.status(404).json({ errorMessages: ['Issue Does Not Exist'], errors: {} });
   const now = new Date().toISOString().replace('Z', '+0000');
-  const comment = { id: uuidv4(), issueKey: issue.key, body: req.body.body, author: req.jiraUser || { key: 'admin', displayName: 'System Administrator' }, created: now, updated: now };
+  const comment = {
+    id: uuidv4(),
+    issueKey: issue.key,
+    body: req.body.body,
+    author: req.jiraUser || { key: 'admin', displayName: 'System Administrator' },
+    created: now,
+    updated: now,
+  };
   store.comments.push(comment);
   res.status(201).json(comment);
 });
@@ -116,7 +157,7 @@ router.post('/:issueIdOrKey/comment', (req, res) => {
 router.get('/:issueIdOrKey/worklog', (req, res) => {
   const issue = findIssue(req.params.issueIdOrKey);
   if (!issue) return res.status(404).json({ errorMessages: ['Issue Does Not Exist'], errors: {} });
-  const worklogs = store.worklogs.filter(w => w.issueKey === issue.key);
+  const worklogs = store.worklogs.filter((w) => w.issueKey === issue.key);
   res.json({ startAt: 0, maxResults: worklogs.length, total: worklogs.length, worklogs });
 });
 
@@ -125,7 +166,15 @@ router.post('/:issueIdOrKey/worklog', (req, res) => {
   const issue = findIssue(req.params.issueIdOrKey);
   if (!issue) return res.status(404).json({ errorMessages: ['Issue Does Not Exist'], errors: {} });
   const now = new Date().toISOString().replace('Z', '+0000');
-  const worklog = { id: uuidv4(), issueKey: issue.key, timeSpent: req.body.timeSpent || '1h', timeSpentSeconds: req.body.timeSpentSeconds || 3600, author: req.jiraUser || { key: 'admin', displayName: 'System Administrator' }, comment: req.body.comment || '', started: req.body.started || now };
+  const worklog = {
+    id: uuidv4(),
+    issueKey: issue.key,
+    timeSpent: req.body.timeSpent || '1h',
+    timeSpentSeconds: req.body.timeSpentSeconds || 3600,
+    author: req.jiraUser || { key: 'admin', displayName: 'System Administrator' },
+    comment: req.body.comment || '',
+    started: req.body.started || now,
+  };
   store.worklogs.push(worklog);
   res.status(201).json(worklog);
 });

@@ -10,7 +10,7 @@ router.post('/login', (req, res) => {
     return res.status(400).send('Username is required');
   }
   // Validate against known users in CTM:People
-  const person = store.forms['CTM:People'].find(p => p['Login ID'] === username);
+  const person = store.forms['CTM:People'].find((p) => p['Login ID'] === username);
   if (!person) {
     return res.status(401).send('Authentication failed');
   }
@@ -30,7 +30,7 @@ router.delete('/logout', (req, res) => {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('AR-JWT ')) {
     const token = authHeader.slice(7);
-    const idx = store.jwt_sessions.findIndex(s => s.token === token);
+    const idx = store.jwt_sessions.findIndex((s) => s.token === token);
     if (idx >= 0) store.jwt_sessions.splice(idx, 1);
   }
   res.status(204).send();

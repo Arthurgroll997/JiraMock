@@ -19,7 +19,7 @@ router.delete('/fragments/:ddName/:fragmentId', (req, res) => {
   const { ddName, fragmentId } = req.params;
   const list = store.objects[ddName];
   if (!list) return res.status(404).json({ error: `Unknown DD: ${ddName}` });
-  const idx = list.findIndex(o => o.ID === fragmentId);
+  const idx = list.findIndex((o) => o.ID === fragmentId);
   if (idx === -1) return res.status(404).json({ error: 'Fragment not found' });
   list.splice(idx, 1);
   res.status(204).send();
@@ -30,7 +30,7 @@ router.get('/fragments/:ddName/:fragmentId', (req, res) => {
   const { ddName, fragmentId } = req.params;
   const list = store.objects[ddName];
   if (!list) return res.status(404).json({ error: `Unknown DD: ${ddName}` });
-  const obj = list.find(o => o.ID === fragmentId);
+  const obj = list.find((o) => o.ID === fragmentId);
   if (!obj) return res.status(404).json({ error: 'Fragment not found' });
   res.json(obj);
 });
@@ -41,7 +41,7 @@ router.get('/fragments/:ddName/:fragmentId/schema-info', (req, res) => {
   const list = store.objects[ddName];
   const dd = store.dataDefinitions[ddName];
   if (!list || !dd) return res.status(404).json({ error: `Unknown DD: ${ddName}` });
-  const obj = list.find(o => o.ID === fragmentId);
+  const obj = list.find((o) => o.ID === fragmentId);
   if (!obj) return res.status(404).json({ error: 'Fragment not found' });
   res.json({ fragment: obj, schema: dd });
 });
@@ -51,7 +51,7 @@ router.put('/fragments/:ddName/:fragmentId', (req, res) => {
   const { ddName, fragmentId } = req.params;
   const list = store.objects[ddName];
   if (!list) return res.status(404).json({ error: `Unknown DD: ${ddName}` });
-  const idx = list.findIndex(o => o.ID === fragmentId);
+  const idx = list.findIndex((o) => o.ID === fragmentId);
   if (idx === -1) return res.status(404).json({ error: 'Fragment not found' });
   list[idx] = { ...list[idx], ...req.body, ID: fragmentId };
   res.json(list[idx]);
@@ -71,7 +71,7 @@ router.get('/objects/:ddName/:objectId', (req, res) => {
   const { ddName, objectId } = req.params;
   const list = store.objects[ddName];
   if (!list) return res.status(404).json({ error: `Unknown DD: ${ddName}` });
-  const obj = list.find(o => o.ID === objectId);
+  const obj = list.find((o) => o.ID === objectId);
   if (!obj) return res.status(404).json({ error: 'Object not found' });
   res.json(obj);
 });
@@ -81,26 +81,34 @@ router.post('/objects/query', (req, res) => {
   const { ddName, columns, filter, pageSize = 50, page = 1 } = req.body;
   const list = store.objects[ddName];
   if (!list) return res.status(404).json({ error: `Unknown DD: ${ddName}` });
-  
+
   let results = [...list];
   if (filter) {
     const f = filter.toLowerCase();
-    results = results.filter(o => JSON.stringify(o).toLowerCase().includes(f));
+    results = results.filter((o) => JSON.stringify(o).toLowerCase().includes(f));
   }
-  
+
   const total = results.length;
   const start = (page - 1) * pageSize;
   results = results.slice(start, start + pageSize);
-  
+
   if (columns && columns.length > 0) {
-    results = results.map(o => {
+    results = results.map((o) => {
       const picked = {};
-      columns.forEach(c => { if (o[c] !== undefined) picked[c] = o[c]; });
+      columns.forEach((c) => {
+        if (o[c] !== undefined) picked[c] = o[c];
+      });
       return picked;
     });
   }
-  
-  res.json({ Total: total, Page: page, PageSize: pageSize, Columns: columns || Object.keys(list[0] || {}), Data: results });
+
+  res.json({
+    Total: total,
+    Page: page,
+    PageSize: pageSize,
+    Columns: columns || Object.keys(list[0] || {}),
+    Data: results,
+  });
 });
 
 // POST create object
@@ -117,7 +125,7 @@ router.put('/objects/:ddName/:objectId', (req, res) => {
   const { ddName, objectId } = req.params;
   const list = store.objects[ddName];
   if (!list) return res.status(404).json({ error: `Unknown DD: ${ddName}` });
-  const idx = list.findIndex(o => o.ID === objectId);
+  const idx = list.findIndex((o) => o.ID === objectId);
   if (idx === -1) return res.status(404).json({ error: 'Object not found' });
   list[idx] = { ...list[idx], ...req.body, ID: objectId };
   res.json(list[idx]);
@@ -128,7 +136,7 @@ router.delete('/objects/:ddName/:objectId', (req, res) => {
   const { ddName, objectId } = req.params;
   const list = store.objects[ddName];
   if (!list) return res.status(404).json({ error: `Unknown DD: ${ddName}` });
-  const idx = list.findIndex(o => o.ID === objectId);
+  const idx = list.findIndex((o) => o.ID === objectId);
   if (idx === -1) return res.status(404).json({ error: 'Object not found' });
   const deleted = list.splice(idx, 1)[0];
   res.json({ deleted: true, object: deleted });

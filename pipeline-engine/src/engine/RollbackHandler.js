@@ -43,14 +43,14 @@ class RollbackHandler {
         results.push({
           step: stepName,
           status: 'success',
-          result
+          result,
         });
       } catch (error) {
         console.error(`  ❌ [Rollback] ${stepName} fehlgeschlagen: ${error.message}`);
         results.push({
           step: stepName,
           status: 'failed',
-          error: error.message
+          error: error.message,
         });
         // Rollback-Fehler stoppen nicht den gesamten Rollback
       }

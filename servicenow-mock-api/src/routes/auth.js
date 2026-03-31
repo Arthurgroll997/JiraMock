@@ -16,10 +16,12 @@ router.post('/token', (req, res) => {
   }
 
   if (!username) {
-    return res.status(400).json({ error: { message: 'Provide Basic auth or username/password in body' } });
+    return res
+      .status(400)
+      .json({ error: { message: 'Provide Basic auth or username/password in body' } });
   }
 
-  const user = store.tables.sys_user.find(u => u.user_name === username);
+  const user = store.tables.sys_user.find((u) => u.user_name === username);
   if (!user) {
     return res.status(401).json({ error: { message: 'Invalid credentials' } });
   }

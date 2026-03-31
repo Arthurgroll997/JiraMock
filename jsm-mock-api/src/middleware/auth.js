@@ -14,13 +14,18 @@ function authMiddleware(req, res, next) {
   }
 
   if (!authHeader) {
-    return res.status(401).json({ errorMessages: ['Missing Authorization header. Provide Bearer token or Basic auth.'], errors: {} });
+    return res
+      .status(401)
+      .json({
+        errorMessages: ['Missing Authorization header. Provide Bearer token or Basic auth.'],
+        errors: {},
+      });
   }
 
   // Bearer token auth
   if (authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
-    const valid = store.tokens.some(t => t.token === token);
+    const valid = store.tokens.some((t) => t.token === token);
     if (!valid) {
       return res.status(401).json({ errorMessages: ['Invalid or expired token'], errors: {} });
     }
@@ -32,7 +37,7 @@ function authMiddleware(req, res, next) {
   if (authHeader.startsWith('Basic ')) {
     const decoded = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
     const [username] = decoded.split(':');
-    const user = store.users.find(u => u.key === username);
+    const user = store.users.find((u) => u.key === username);
     if (user) {
       req.jiraUser = user;
       return next();

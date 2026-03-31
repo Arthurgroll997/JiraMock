@@ -7,8 +7,10 @@ router.use(auth);
 
 // List all data definitions
 router.get('/datadefinitions', (req, res) => {
-  const dds = Object.values(store.dataDefinitions).map(dd => ({
-    name: dd.name, displayName: dd.displayName, description: dd.description
+  const dds = Object.values(store.dataDefinitions).map((dd) => ({
+    name: dd.name,
+    displayName: dd.displayName,
+    description: dd.description,
   }));
   res.json(dds);
 });

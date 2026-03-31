@@ -7,16 +7,27 @@ const router = express.Router();
 router.post('/Cyberark/Logon', (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) {
-    return res.status(400).json({ ErrorCode: 'PASWS003E', ErrorMessage: 'username and password are required' });
+    return res
+      .status(400)
+      .json({ ErrorCode: 'PASWS003E', ErrorMessage: 'username and password are required' });
   }
 
-  const user = db.users.find(u => u.username === username && u.enableUser);
+  const user = db.users.find((u) => u.username === username && u.enableUser);
   if (!user) {
-    return res.status(403).json({ ErrorCode: 'PASWS005E', ErrorMessage: 'Authentication failure. Invalid credentials.' });
+    return res
+      .status(403)
+      .json({
+        ErrorCode: 'PASWS005E',
+        ErrorMessage: 'Authentication failure. Invalid credentials.',
+      });
   }
 
   const token = uuidv4().replace(/-/g, '');
-  db.tokens.set(token, { userId: user.id, username: user.username, created_at: new Date().toISOString() });
+  db.tokens.set(token, {
+    userId: user.id,
+    username: user.username,
+    created_at: new Date().toISOString(),
+  });
   // CyberArk returns the token as a plain quoted string
   res.json(token);
 });

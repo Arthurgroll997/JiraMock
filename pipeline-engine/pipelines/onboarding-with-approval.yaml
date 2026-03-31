@@ -3,76 +3,76 @@
 # M42 Ticket → AD User → AD Gruppe → Fudo Sync → Verifizierung → Audit
 # =============================================================================
 
-name: "Onboarding mit Genehmigung"
-description: "Vollständiger Onboarding-Workflow: Ticket erstellen, AD-Benutzer anlegen, Gruppenmitgliedschaft, Fudo-Sync und Audit-Trail"
-version: "1.0"
+name: 'Onboarding mit Genehmigung'
+description: 'Vollständiger Onboarding-Workflow: Ticket erstellen, AD-Benutzer anlegen, Gruppenmitgliedschaft, Fudo-Sync und Audit-Trail'
+version: '1.0'
 
 trigger:
   source: matrix42
   event: access-request.created
 
 steps:
-  - name: "Onboarding-Ticket erstellen"
+  - name: 'Onboarding-Ticket erstellen'
     system: matrix42-esm
     action: tickets.create
     params:
-      title: "Onboarding: {{ trigger.user }}"
-      description: "Neuer Mitarbeiter {{ trigger.user }} wird ongeboardet"
-      category: "onboarding"
-      priority: "medium"
-      requester: "{{ trigger.user }}@corp.local"
+      title: 'Onboarding: {{ trigger.user }}'
+      description: 'Neuer Mitarbeiter {{ trigger.user }} wird ongeboardet'
+      category: 'onboarding'
+      priority: 'medium'
+      requester: '{{ trigger.user }}@corp.local'
 
-  - name: "AD-Benutzer anlegen"
+  - name: 'AD-Benutzer anlegen'
     system: active-directory
     action: users.create
     params:
-      sAMAccountName: "{{ trigger.user }}"
-      displayName: "{{ trigger.user }}"
-      mail: "{{ trigger.user }}@corp.local"
-      department: "{{ vars.department }}"
+      sAMAccountName: '{{ trigger.user }}'
+      displayName: '{{ trigger.user }}'
+      mail: '{{ trigger.user }}@corp.local'
+      department: '{{ vars.department }}'
       enabled: true
 
-  - name: "Zur AD-Gruppe hinzufügen"
+  - name: 'Zur AD-Gruppe hinzufügen'
     system: active-directory
     action: groups.add-member
     params:
-      name: "{{ trigger.group }}"
-      member: "{{ trigger.user }}"
+      name: '{{ trigger.group }}'
+      member: '{{ trigger.user }}'
 
-  - name: "Fudo PAM Sync starten"
+  - name: 'Fudo PAM Sync starten'
     system: fudo-pam
     action: user-directory.sync
 
-  - name: "Fudo-Benutzer verifizieren"
+  - name: 'Fudo-Benutzer verifizieren'
     system: fudo-pam
     action: users.list
 
-  - name: "Audit-Ticket aktualisieren"
+  - name: 'Audit-Ticket aktualisieren'
     system: matrix42-esm
     action: tickets.comment
     params:
-      id: "{{ steps.Onboarding-Ticket erstellen.result.id }}"
-      text: "Onboarding abgeschlossen für {{ trigger.user }}. AD-Benutzer erstellt, Gruppe {{ trigger.group }} zugewiesen, Fudo-Sync durchgeführt."
+      id: '{{ steps.Onboarding-Ticket erstellen.result.id }}'
+      text: 'Onboarding abgeschlossen für {{ trigger.user }}. AD-Benutzer erstellt, Gruppe {{ trigger.group }} zugewiesen, Fudo-Sync durchgeführt.'
 
 rollback:
-  - name: "AD-Gruppenmitgliedschaft entfernen"
+  - name: 'AD-Gruppenmitgliedschaft entfernen'
     system: active-directory
     action: groups.remove-member
     params:
-      name: "{{ trigger.group }}"
-      member: "{{ trigger.user }}"
+      name: '{{ trigger.group }}'
+      member: '{{ trigger.user }}'
 
-  - name: "AD-Benutzer löschen"
+  - name: 'AD-Benutzer löschen'
     system: active-directory
     action: users.delete
     params:
-      sam: "{{ trigger.user }}"
+      sam: '{{ trigger.user }}'
 
-  - name: "Fehler-Ticket erstellen"
+  - name: 'Fehler-Ticket erstellen'
     system: matrix42-esm
     action: tickets.create
     params:
-      title: "FEHLER: Onboarding {{ trigger.user }} fehlgeschlagen"
-      description: "Automatischer Rollback wurde ausgeführt"
-      category: "incident"
-      priority: "high"
+      title: 'FEHLER: Onboarding {{ trigger.user }} fehlgeschlagen'
+      description: 'Automatischer Rollback wurde ausgeführt'
+      category: 'incident'
+      priority: 'high'

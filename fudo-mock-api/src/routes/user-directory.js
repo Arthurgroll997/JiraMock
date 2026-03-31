@@ -10,7 +10,17 @@ router.get('/config', (req, res) => {
 });
 
 router.put('/config', (req, res) => {
-  const allowed = ['host', 'port', 'use_ssl', 'base_dn', 'bind_dn', 'sync_interval_minutes', 'sync_groups', 'group_base_dn', 'user_base_dn'];
+  const allowed = [
+    'host',
+    'port',
+    'use_ssl',
+    'base_dn',
+    'bind_dn',
+    'sync_interval_minutes',
+    'sync_groups',
+    'group_base_dn',
+    'user_base_dn',
+  ];
   const body = req.body || {};
   for (const key of allowed) {
     if (body[key] !== undefined) db.userDirectoryConfig[key] = body[key];
@@ -37,7 +47,10 @@ router.get('/status', (req, res) => {
     last_sync: db.userDirectoryConfig.last_sync,
     last_sync_status: db.userDirectoryConfig.last_sync_status,
     last_sync_summary: db.userDirectoryConfig.last_sync_summary,
-    next_sync: new Date(new Date(db.userDirectoryConfig.last_sync).getTime() + db.userDirectoryConfig.sync_interval_minutes * 60000).toISOString(),
+    next_sync: new Date(
+      new Date(db.userDirectoryConfig.last_sync).getTime() +
+        db.userDirectoryConfig.sync_interval_minutes * 60000,
+    ).toISOString(),
   });
 });
 
@@ -46,10 +59,30 @@ router.get('/preview', (req, res) => {
   res.json({
     preview: true,
     changes: {
-      users_to_add: [{ login: 'new.user', name: 'New Corporate User', email: 'new.user@corp.local', source_dn: 'CN=New User,OU=Users,DC=corp,DC=local' }],
-      users_to_update: [{ login: 'j.doe', field: 'email', old_value: 'john.doe@corp.local', new_value: 'j.doe@corp.local' }],
+      users_to_add: [
+        {
+          login: 'new.user',
+          name: 'New Corporate User',
+          email: 'new.user@corp.local',
+          source_dn: 'CN=New User,OU=Users,DC=corp,DC=local',
+        },
+      ],
+      users_to_update: [
+        {
+          login: 'j.doe',
+          field: 'email',
+          old_value: 'john.doe@corp.local',
+          new_value: 'j.doe@corp.local',
+        },
+      ],
       users_to_remove: [],
-      groups_to_sync: db.groups.filter(g => g.ad_group_dn).map(g => ({ name: g.name, ad_group_dn: g.ad_group_dn, member_count: db.groupUsers.filter(gu => gu.group_id === g.id).length })),
+      groups_to_sync: db.groups
+        .filter((g) => g.ad_group_dn)
+        .map((g) => ({
+          name: g.name,
+          ad_group_dn: g.ad_group_dn,
+          member_count: db.groupUsers.filter((gu) => gu.group_id === g.id).length,
+        })),
     },
   });
 });

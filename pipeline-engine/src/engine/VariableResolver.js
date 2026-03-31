@@ -14,7 +14,7 @@ class VariableResolver {
       return VariableResolver._resolveString(value, context);
     }
     if (Array.isArray(value)) {
-      return value.map(item => VariableResolver.resolve(item, context));
+      return value.map((item) => VariableResolver.resolve(item, context));
     }
     if (value && typeof value === 'object') {
       const resolved = {};

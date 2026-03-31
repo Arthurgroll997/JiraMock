@@ -13,7 +13,9 @@ app.set('json spaces', 2);
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
-    console.log(`${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);
+    console.log(
+      `${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`,
+    );
   });
   next();
 });
@@ -40,7 +42,7 @@ app.post('/reset', (req, res) => {
   store.safeMembers = [...freshSeed.safeMembers];
   store.accounts = [...freshSeed.accounts];
   store.users = [...freshSeed.users];
-  store.groups = freshSeed.groups.map(g => ({ ...g, members: [...g.members] }));
+  store.groups = freshSeed.groups.map((g) => ({ ...g, members: [...g.members] }));
   store.psmSessions = [...freshSeed.psmSessions];
   store.systemHealth = [...freshSeed.systemHealth];
   store.tokens = new Map();
@@ -61,13 +63,15 @@ app.get('/api/Server', authMiddleware, (req, res) => {
     ServerName: 'CyberArk-Mock-PVWA',
     ServerId: 'mock-001',
     ServerVersion: '12.6.0-mock',
-    AuthenticationMethods: [{ id: 'CyberArk', enabled: true }]
+    AuthenticationMethods: [{ id: 'CyberArk', enabled: true }],
   });
 });
 
 // --- 404 ---
 app.use((req, res) => {
-  res.status(404).json({ ErrorCode: 'PASWS019E', ErrorMessage: `Route ${req.method} ${req.path} not found` });
+  res
+    .status(404)
+    .json({ ErrorCode: 'PASWS019E', ErrorMessage: `Route ${req.method} ${req.path} not found` });
 });
 
 // --- Start ---
@@ -75,7 +79,9 @@ const PORT = process.env.PORT || 8450;
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🔐 CyberArk PVWA Mock API v12.6 running on http://localhost:${PORT}`);
-    console.log(`   Login: POST /api/auth/Cyberark/Logon {"username":"Administrator","password":"Cyberark1!"}`);
+    console.log(
+      `   Login: POST /api/auth/Cyberark/Logon {"username":"Administrator","password":"Cyberark1!"}`,
+    );
   });
 }
 

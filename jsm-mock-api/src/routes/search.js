@@ -5,7 +5,8 @@ const BASE = `http://localhost:${process.env.PORT || 8448}`;
 
 function parseJQL(jql) {
   if (!jql || !jql.trim()) return { filters: [], orderBy: null, orderDir: 'ASC' };
-  let orderBy = null, orderDir = 'ASC';
+  let orderBy = null,
+    orderDir = 'ASC';
   let filterPart = jql;
   const orderMatch = jql.match(/\s+ORDER\s+BY\s+(\w+)\s*(ASC|DESC)?\s*$/i);
   if (orderMatch) {
@@ -18,17 +19,32 @@ function parseJQL(jql) {
   const parts = filterPart.split(/\s+(AND|OR)\s+/i);
   let currentOp = 'AND';
   for (const part of parts) {
-    if (part.toUpperCase() === 'AND') { currentOp = 'AND'; continue; }
-    if (part.toUpperCase() === 'OR') { currentOp = 'OR'; continue; }
+    if (part.toUpperCase() === 'AND') {
+      currentOp = 'AND';
+      continue;
+    }
+    if (part.toUpperCase() === 'OR') {
+      currentOp = 'OR';
+      continue;
+    }
     const m = part.trim().match(/^(\w+)\s*(=|!=|~|IN|NOT\s+IN|IS)\s*(.+)$/i);
     if (m) {
       let value = m[3].trim().replace(/^["']|["']$/g, '');
       // Handle IN (value1, value2)
       let values = null;
       if (m[2].toUpperCase().includes('IN')) {
-        values = value.replace(/[()]/g, '').split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+        values = value
+          .replace(/[()]/g, '')
+          .split(',')
+          .map((v) => v.trim().replace(/^["']|["']$/g, ''));
       }
-      tokens.push({ field: m[1].toLowerCase(), op: m[2].toUpperCase().trim(), value, values, combinator: currentOp });
+      tokens.push({
+        field: m[1].toLowerCase(),
+        op: m[2].toUpperCase().trim(),
+        value,
+        values,
+        combinator: currentOp,
+      });
     }
     currentOp = 'AND';
   }
@@ -37,17 +53,28 @@ function parseJQL(jql) {
 
 function getFieldValue(issue, field) {
   switch (field) {
-    case 'project': return issue.fields.project ? issue.fields.project.key : '';
-    case 'issuetype': return issue.fields.issuetype ? issue.fields.issuetype.name : '';
-    case 'priority': return issue.fields.priority ? issue.fields.priority.name : '';
-    case 'status': return issue.fields.status ? issue.fields.status.name : '';
-    case 'assignee': return issue.fields.assignee ? issue.fields.assignee.key : '';
-    case 'reporter': return issue.fields.reporter ? issue.fields.reporter.key : '';
-    case 'key': return issue.key;
-    case 'summary': return issue.fields.summary || '';
-    case 'created': return issue.fields.created || '';
-    case 'updated': return issue.fields.updated || '';
-    default: return issue.fields[field] || '';
+    case 'project':
+      return issue.fields.project ? issue.fields.project.key : '';
+    case 'issuetype':
+      return issue.fields.issuetype ? issue.fields.issuetype.name : '';
+    case 'priority':
+      return issue.fields.priority ? issue.fields.priority.name : '';
+    case 'status':
+      return issue.fields.status ? issue.fields.status.name : '';
+    case 'assignee':
+      return issue.fields.assignee ? issue.fields.assignee.key : '';
+    case 'reporter':
+      return issue.fields.reporter ? issue.fields.reporter.key : '';
+    case 'key':
+      return issue.key;
+    case 'summary':
+      return issue.fields.summary || '';
+    case 'created':
+      return issue.fields.created || '';
+    case 'updated':
+      return issue.fields.updated || '';
+    default:
+      return issue.fields[field] || '';
   }
 }
 
@@ -55,13 +82,20 @@ function matchFilter(issue, filter) {
   const val = String(getFieldValue(issue, filter.field)).toLowerCase();
   const target = filter.value.toLowerCase();
   switch (filter.op) {
-    case '=': return val === target;
-    case '!=': return val !== target;
-    case '~': return val.includes(target);
-    case 'IS': return target === 'empty' ? !val : !!val;
-    case 'IN': return filter.values ? filter.values.some(v => val === v.toLowerCase()) : false;
-    case 'NOT IN': return filter.values ? !filter.values.some(v => val === v.toLowerCase()) : true;
-    default: return true;
+    case '=':
+      return val === target;
+    case '!=':
+      return val !== target;
+    case '~':
+      return val.includes(target);
+    case 'IS':
+      return target === 'empty' ? !val : !!val;
+    case 'IN':
+      return filter.values ? filter.values.some((v) => val === v.toLowerCase()) : false;
+    case 'NOT IN':
+      return filter.values ? !filter.values.some((v) => val === v.toLowerCase()) : true;
+    default:
+      return true;
   }
 }
 
@@ -74,7 +108,7 @@ router.post('/', (req, res) => {
 
   let results = store.issues;
   if (filters.length > 0) {
-    results = results.filter(issue => {
+    results = results.filter((issue) => {
       let pass = matchFilter(issue, filters[0]);
       for (let i = 1; i < filters.length; i++) {
         const f = filters[i];
@@ -102,7 +136,12 @@ router.post('/', (req, res) => {
     startAt,
     maxResults,
     total,
-    issues: paged.map(i => ({ id: i.id, key: i.key, self: `${BASE}/rest/api/2/issue/${i.id}`, fields: i.fields })),
+    issues: paged.map((i) => ({
+      id: i.id,
+      key: i.key,
+      self: `${BASE}/rest/api/2/issue/${i.id}`,
+      fields: i.fields,
+    })),
   });
 });
 
@@ -114,7 +153,7 @@ router.get('/', (req, res) => {
   const { filters, orderBy, orderDir } = parseJQL(jql);
   let results = store.issues;
   if (filters.length > 0) {
-    results = results.filter(issue => {
+    results = results.filter((issue) => {
       let pass = matchFilter(issue, filters[0]);
       for (let i = 1; i < filters.length; i++) {
         const f = filters[i];
@@ -126,13 +165,26 @@ router.get('/', (req, res) => {
   }
   if (orderBy) {
     results.sort((a, b) => {
-      const cmp = String(getFieldValue(a, orderBy)).localeCompare(String(getFieldValue(b, orderBy)));
+      const cmp = String(getFieldValue(a, orderBy)).localeCompare(
+        String(getFieldValue(b, orderBy)),
+      );
       return orderDir === 'DESC' ? -cmp : cmp;
     });
   }
   const total = results.length;
   const paged = results.slice(startAt, startAt + maxResults);
-  res.json({ expand: 'schema,names', startAt, maxResults, total, issues: paged.map(i => ({ id: i.id, key: i.key, self: `${BASE}/rest/api/2/issue/${i.id}`, fields: i.fields })) });
+  res.json({
+    expand: 'schema,names',
+    startAt,
+    maxResults,
+    total,
+    issues: paged.map((i) => ({
+      id: i.id,
+      key: i.key,
+      self: `${BASE}/rest/api/2/issue/${i.id}`,
+      fields: i.fields,
+    })),
+  });
 });
 
 module.exports = router;

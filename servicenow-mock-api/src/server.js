@@ -17,7 +17,11 @@ app.use((req, res, next) => {
 
 // --- Health & Admin ---
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', service: 'servicenow-mock-api', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'healthy',
+    service: 'servicenow-mock-api',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 app.post('/reset', (req, res) => {
@@ -41,7 +45,11 @@ app.use('/api/now/events', require('./routes/events'));
 
 // --- 404 ---
 app.use((req, res) => {
-  res.status(404).json({ error: { message: 'Not found', detail: `${req.method} ${req.path} is not a valid endpoint` } });
+  res
+    .status(404)
+    .json({
+      error: { message: 'Not found', detail: `${req.method} ${req.path} is not a valid endpoint` },
+    });
 });
 
 // --- Seed Data ---

@@ -3,78 +3,78 @@
 # Fudo Sessions terminieren → Benutzer sperren → AD deaktivieren → Incident-Tickets
 # =============================================================================
 
-name: "Security Incident Response"
-description: "Automatische Reaktion auf Sicherheitsvorfälle: Sessions beenden, Zugriffe sperren, Incidents erstellen"
-version: "1.0"
+name: 'Security Incident Response'
+description: 'Automatische Reaktion auf Sicherheitsvorfälle: Sessions beenden, Zugriffe sperren, Incidents erstellen'
+version: '1.0'
 
 trigger:
   source: siem
   event: security-incident
 
 steps:
-  - name: "Alle aktiven Sessions auflisten"
+  - name: 'Alle aktiven Sessions auflisten'
     system: fudo-pam
     action: session-control.live
 
-  - name: "Verdächtige Session beenden"
+  - name: 'Verdächtige Session beenden'
     system: fudo-pam
     action: session-control.terminate
     params:
-      id: "{{ trigger.session_id }}"
+      id: '{{ trigger.session_id }}'
 
-  - name: "Fudo-Benutzer sperren"
+  - name: 'Fudo-Benutzer sperren'
     system: fudo-pam
     action: users.block
     params:
-      id: "{{ trigger.fudo_user_id }}"
+      id: '{{ trigger.fudo_user_id }}'
 
-  - name: "AD-Benutzer deaktivieren"
+  - name: 'AD-Benutzer deaktivieren'
     system: active-directory
     action: users.update
     params:
-      sam: "{{ trigger.user }}"
+      sam: '{{ trigger.user }}'
       enabled: false
 
-  - name: "AD-Gruppen entfernen"
+  - name: 'AD-Gruppen entfernen'
     system: active-directory
     action: bulk.group-membership
     params:
-      action: "remove"
-      user: "{{ trigger.user }}"
-      groups: "{{ trigger.groups }}"
+      action: 'remove'
+      user: '{{ trigger.user }}'
+      groups: '{{ trigger.groups }}'
 
-  - name: "Security-Incident-Ticket erstellen"
+  - name: 'Security-Incident-Ticket erstellen'
     system: matrix42-esm
     action: tickets.create
     params:
-      title: "SECURITY INCIDENT: Verdächtige Aktivität von {{ trigger.user }}"
-      description: "Automatische Sperrung durchgeführt. Session {{ trigger.session_id }} beendet. Benutzer {{ trigger.user }}@corp.local in Fudo und AD gesperrt."
-      category: "security-incident"
-      priority: "critical"
+      title: 'SECURITY INCIDENT: Verdächtige Aktivität von {{ trigger.user }}'
+      description: 'Automatische Sperrung durchgeführt. Session {{ trigger.session_id }} beendet. Benutzer {{ trigger.user }}@corp.local in Fudo und AD gesperrt.'
+      category: 'security-incident'
+      priority: 'critical'
 
-  - name: "Eskalations-Ticket für SOC"
+  - name: 'Eskalations-Ticket für SOC'
     system: matrix42-esm
     action: tickets.create
     params:
-      title: "SOC Review: Incident {{ trigger.user }}"
-      description: "Bitte manuelle Überprüfung des Sicherheitsvorfalls. Automatische Maßnahmen wurden ergriffen."
-      category: "security-review"
-      priority: "critical"
+      title: 'SOC Review: Incident {{ trigger.user }}'
+      description: 'Bitte manuelle Überprüfung des Sicherheitsvorfalls. Automatische Maßnahmen wurden ergriffen.'
+      category: 'security-review'
+      priority: 'critical'
 
-  - name: "Provisioning-Bericht erstellen"
+  - name: 'Provisioning-Bericht erstellen'
     system: matrix42-esm
     action: reports.provisioning
 
 rollback:
-  - name: "Fudo-Benutzer entsperren"
+  - name: 'Fudo-Benutzer entsperren'
     system: fudo-pam
     action: users.unblock
     params:
-      id: "{{ trigger.fudo_user_id }}"
+      id: '{{ trigger.fudo_user_id }}'
 
-  - name: "AD-Benutzer reaktivieren"
+  - name: 'AD-Benutzer reaktivieren'
     system: active-directory
     action: users.update
     params:
-      sam: "{{ trigger.user }}"
+      sam: '{{ trigger.user }}'
       enabled: true

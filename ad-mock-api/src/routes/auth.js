@@ -13,28 +13,39 @@ router.post('/bind', (req, res) => {
   const cnMatch = dn.match(/^CN=([^,]+)/i);
   const cnValue = cnMatch ? cnMatch[1].trim() : dn;
 
-  const user = store.users.find(u =>
-    u.distinguishedName === dn ||
-    u.cn.toLowerCase() === cnValue.toLowerCase() ||
-    u.sAMAccountName.toLowerCase() === cnValue.toLowerCase()
+  const user = store.users.find(
+    (u) =>
+      u.distinguishedName === dn ||
+      u.cn.toLowerCase() === cnValue.toLowerCase() ||
+      u.sAMAccountName.toLowerCase() === cnValue.toLowerCase(),
   );
 
   if (!user) {
-    return res.status(401).json({ error: 'Invalid credentials', message: 'LDAP bind failed: user not found' });
+    return res
+      .status(401)
+      .json({ error: 'Invalid credentials', message: 'LDAP bind failed: user not found' });
   }
 
   if (!user.enabled) {
-    return res.status(401).json({ error: 'Account disabled', message: 'LDAP bind failed: account is disabled' });
+    return res
+      .status(401)
+      .json({ error: 'Account disabled', message: 'LDAP bind failed: account is disabled' });
   }
 
   // Mock password validation: accept "admin", "admin123", "Password1!", or the sAMAccountName as password
   const validPasswords = ['admin', 'admin123', 'Password1!', user.sAMAccountName];
   if (!validPasswords.includes(password)) {
-    return res.status(401).json({ error: 'Invalid credentials', message: 'LDAP bind failed: wrong password' });
+    return res
+      .status(401)
+      .json({ error: 'Invalid credentials', message: 'LDAP bind failed: wrong password' });
   }
 
   const token = uuid();
-  const session = { bind_dn: user.distinguishedName, user: user.sAMAccountName, created: new Date().toISOString() };
+  const session = {
+    bind_dn: user.distinguishedName,
+    user: user.sAMAccountName,
+    created: new Date().toISOString(),
+  };
   tokens.set(token, session);
   res.json({ token, bind_dn: user.distinguishedName, message: 'Bind successful' });
 });

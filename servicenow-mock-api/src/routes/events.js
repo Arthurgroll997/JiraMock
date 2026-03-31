@@ -26,7 +26,7 @@ router.get('/list', (req, res) => {
 
 // DELETE /api/now/events/:id
 router.delete('/:id', (req, res) => {
-  const idx = store.webhooks.findIndex(w => w.id === req.params.id);
+  const idx = store.webhooks.findIndex((w) => w.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: { message: 'Webhook not found' } });
   store.webhooks.splice(idx, 1);
   res.status(204).end();

@@ -43,7 +43,17 @@ app.use('/api/arsys/v1/webhooks', require('./routes/webhook'));
 
 // --- 404 ---
 app.use((req, res) => {
-  res.status(404).json({ error: [{ messageType: 'ERROR', messageText: `${req.method} ${req.path} is not a valid endpoint`, messageNumber: 9999 }] });
+  res
+    .status(404)
+    .json({
+      error: [
+        {
+          messageType: 'ERROR',
+          messageText: `${req.method} ${req.path} is not a valid endpoint`,
+          messageNumber: 9999,
+        },
+      ],
+    });
 });
 
 // --- Seed Data ---

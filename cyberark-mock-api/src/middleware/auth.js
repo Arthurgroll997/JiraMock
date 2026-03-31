@@ -13,7 +13,9 @@ function authMiddleware(req, res, next) {
   }
 
   if (!authHeader) {
-    return res.status(401).json({ ErrorCode: 'PASWS001E', ErrorMessage: 'Missing Authorization header' });
+    return res
+      .status(401)
+      .json({ ErrorCode: 'PASWS001E', ErrorMessage: 'Missing Authorization header' });
   }
 
   // CyberArk uses raw token in Authorization header (no Bearer prefix typically)
@@ -27,7 +29,9 @@ function authMiddleware(req, res, next) {
 
   const session = db.tokens.get(token);
   if (!session) {
-    return res.status(401).json({ ErrorCode: 'PASWS004E', ErrorMessage: 'Invalid or expired session token' });
+    return res
+      .status(401)
+      .json({ ErrorCode: 'PASWS004E', ErrorMessage: 'Invalid or expired session token' });
   }
 
   req.userId = session.userId;

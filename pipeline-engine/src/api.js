@@ -24,9 +24,18 @@ app.use(express.json());
 
 // --- Registry ---
 const registry = new ConnectorRegistry();
-registry.register('fudo-pam', new FudoPamConnector(process.env.FUDO_URL || 'http://localhost:8443'));
-registry.register('matrix42-esm', new Matrix42EsmConnector(process.env.M42_URL || 'http://localhost:8444'));
-registry.register('active-directory', new ActiveDirectoryConnector(process.env.AD_URL || 'http://localhost:8445'));
+registry.register(
+  'fudo-pam',
+  new FudoPamConnector(process.env.FUDO_URL || 'http://localhost:8443'),
+);
+registry.register(
+  'matrix42-esm',
+  new Matrix42EsmConnector(process.env.M42_URL || 'http://localhost:8444'),
+);
+registry.register(
+  'active-directory',
+  new ActiveDirectoryConnector(process.env.AD_URL || 'http://localhost:8445'),
+);
 
 const runner = new PipelineRunner(registry);
 
@@ -85,8 +94,14 @@ app.post('/pipelines/validate', async (req, res) => {
 
     if (yamlContent) {
       const pipeline = yaml.load(yamlContent);
-      if (!pipeline.name) return res.status(400).json({ valid: false, errors: ['Pipeline benötigt ein "name" Feld'] });
-      if (!pipeline.steps) return res.status(400).json({ valid: false, errors: ['Pipeline benötigt ein "steps" Array'] });
+      if (!pipeline.name)
+        return res
+          .status(400)
+          .json({ valid: false, errors: ['Pipeline benötigt ein "name" Feld'] });
+      if (!pipeline.steps)
+        return res
+          .status(400)
+          .json({ valid: false, errors: ['Pipeline benötigt ein "steps" Array'] });
       return res.json({ valid: true, name: pipeline.name, steps: pipeline.steps.length });
     }
 
@@ -141,7 +156,7 @@ app.get('/connectors/:name/actions', (req, res) => {
       actions[name] = {
         method: action.method,
         path: action.path,
-        description: action.description
+        description: action.description,
       };
     }
     res.json({ connector: req.params.name, actions });

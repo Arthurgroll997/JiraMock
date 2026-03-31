@@ -22,7 +22,9 @@ class ConnectorRegistry {
   get(name) {
     const connector = this.connectors.get(name);
     if (!connector) {
-      throw new Error(`Connector "${name}" nicht registriert. Verfügbar: ${this.list().join(', ')}`);
+      throw new Error(
+        `Connector "${name}" nicht registriert. Verfügbar: ${this.list().join(', ')}`,
+      );
     }
     return connector;
   }
@@ -43,7 +45,7 @@ class ConnectorRegistry {
       result[name] = {
         name,
         baseUrl: connector.baseUrl,
-        actions: Object.keys(connector.actions || {})
+        actions: Object.keys(connector.actions || {}),
       };
     }
     return result;

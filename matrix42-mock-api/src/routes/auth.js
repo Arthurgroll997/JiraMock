@@ -10,7 +10,7 @@ router.post('/GenerateAccessTokenFromApiToken/', (req, res) => {
     return res.status(401).json({ error: 'API token required in Authorization header' });
   }
   const apiToken = authHeader.split(' ')[1];
-  const entry = store.tokens.find(t => t.apiToken === apiToken);
+  const entry = store.tokens.find((t) => t.apiToken === apiToken);
   if (!entry) {
     return res.status(403).json({ error: 'Invalid API token' });
   }
@@ -19,7 +19,12 @@ router.post('/GenerateAccessTokenFromApiToken/', (req, res) => {
   entry.RawToken = rawToken;
   entry.ValidTo = validTo;
   // Also add as a valid token for auth middleware
-  store.tokens.push({ apiToken: null, RawToken: rawToken, ValidTo: validTo, UserName: entry.UserName });
+  store.tokens.push({
+    apiToken: null,
+    RawToken: rawToken,
+    ValidTo: validTo,
+    UserName: entry.UserName,
+  });
   res.json({ RawToken: rawToken, ValidTo: validTo, UserName: entry.UserName });
 });
 

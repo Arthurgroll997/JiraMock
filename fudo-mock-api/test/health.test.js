@@ -20,7 +20,7 @@ describe('Health endpoint', () => {
     http.get(`http://localhost:${port}/health`, (res) => {
       expect(res.statusCode).toBe(200);
       let data = '';
-      res.on('data', (chunk) => data += chunk);
+      res.on('data', (chunk) => (data += chunk));
       res.on('end', () => {
         const body = JSON.parse(data);
         expect(body.status).toBe('ok');

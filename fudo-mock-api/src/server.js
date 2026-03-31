@@ -13,7 +13,9 @@ app.set('json spaces', 2);
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
-    console.log(`${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);
+    console.log(
+      `${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`,
+    );
   });
   next();
 });
@@ -42,11 +44,15 @@ app.post('/reset', (req, res) => {
   delete require.cache[require.resolve('./data/seed')];
   const freshSeed = require('./data/seed');
   const store = require('./data/store');
-  Object.keys(freshSeed).forEach(key => {
+  Object.keys(freshSeed).forEach((key) => {
     if (Array.isArray(store[key]) && Array.isArray(freshSeed[key])) {
       store[key].length = 0;
       store[key].push(...freshSeed[key]);
-    } else if (typeof freshSeed[key] === 'object' && freshSeed[key] !== null && !Array.isArray(freshSeed[key])) {
+    } else if (
+      typeof freshSeed[key] === 'object' &&
+      freshSeed[key] !== null &&
+      !Array.isArray(freshSeed[key])
+    ) {
       store[key] = { ...freshSeed[key] };
     }
   });
@@ -64,7 +70,9 @@ app.get('/health', (req, res) => {
 
 // --- 404 ---
 app.use((req, res) => {
-  res.status(404).json({ error: 'Not Found', message: `Route ${req.method} ${req.path} not found` });
+  res
+    .status(404)
+    .json({ error: 'Not Found', message: `Route ${req.method} ${req.path} not found` });
 });
 
 // --- Start ---

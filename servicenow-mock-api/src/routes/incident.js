@@ -9,7 +9,7 @@ function now() {
 // POST /api/now/incident/resolve/:sys_id
 router.post('/resolve/:sys_id', (req, res) => {
   const table = store.tables.incident;
-  const idx = table.findIndex(r => r.sys_id === req.params.sys_id);
+  const idx = table.findIndex((r) => r.sys_id === req.params.sys_id);
   if (idx === -1) return res.status(404).json({ error: { message: 'Incident not found' } });
 
   const ts = now();
@@ -28,7 +28,7 @@ router.post('/resolve/:sys_id', (req, res) => {
 // POST /api/now/incident/close/:sys_id
 router.post('/close/:sys_id', (req, res) => {
   const table = store.tables.incident;
-  const idx = table.findIndex(r => r.sys_id === req.params.sys_id);
+  const idx = table.findIndex((r) => r.sys_id === req.params.sys_id);
   if (idx === -1) return res.status(404).json({ error: { message: 'Incident not found' } });
 
   const ts = now();
@@ -49,15 +49,26 @@ router.get('/stats', (req, res) => {
   const table = store.tables.incident;
   const byPriority = { 1: 0, 2: 0, 3: 0, 4: 0 };
   const byState = { 1: 0, 2: 0, 3: 0, 6: 0, 7: 0 };
-  table.forEach(i => {
+  table.forEach((i) => {
     byPriority[i.priority] = (byPriority[i.priority] || 0) + 1;
     byState[i.state] = (byState[i.state] || 0) + 1;
   });
   res.json({
     result: {
       total: table.length,
-      by_priority: { critical: byPriority[1], high: byPriority[2], medium: byPriority[3], low: byPriority[4] },
-      by_state: { new: byState[1], in_progress: byState[2], on_hold: byState[3], resolved: byState[6], closed: byState[7] },
+      by_priority: {
+        critical: byPriority[1],
+        high: byPriority[2],
+        medium: byPriority[3],
+        low: byPriority[4],
+      },
+      by_state: {
+        new: byState[1],
+        in_progress: byState[2],
+        on_hold: byState[3],
+        resolved: byState[6],
+        closed: byState[7],
+      },
     },
   });
 });

@@ -13,9 +13,18 @@ const ActiveDirectoryConnector = require('./connectors/active-directory');
 // --- Registry mit allen Connectors aufbauen ---
 function createRegistry() {
   const registry = new ConnectorRegistry();
-  registry.register('fudo-pam', new FudoPamConnector(process.env.FUDO_URL || 'http://localhost:8443'));
-  registry.register('matrix42-esm', new Matrix42EsmConnector(process.env.M42_URL || 'http://localhost:8444'));
-  registry.register('active-directory', new ActiveDirectoryConnector(process.env.AD_URL || 'http://localhost:8445'));
+  registry.register(
+    'fudo-pam',
+    new FudoPamConnector(process.env.FUDO_URL || 'http://localhost:8443'),
+  );
+  registry.register(
+    'matrix42-esm',
+    new Matrix42EsmConnector(process.env.M42_URL || 'http://localhost:8444'),
+  );
+  registry.register(
+    'active-directory',
+    new ActiveDirectoryConnector(process.env.AD_URL || 'http://localhost:8445'),
+  );
   return registry;
 }
 
@@ -70,7 +79,10 @@ Umgebungsvariablen:
   switch (command) {
     case 'run': {
       const file = args[1];
-      if (!file) { console.error('❌ Pipeline-Datei angeben!'); process.exit(1); }
+      if (!file) {
+        console.error('❌ Pipeline-Datei angeben!');
+        process.exit(1);
+      }
       const filePath = path.resolve(file);
       const result = await runner.run(filePath, vars);
       console.log('\n📊 Ergebnis:', JSON.stringify(result, null, 2));
@@ -80,7 +92,10 @@ Umgebungsvariablen:
 
     case 'dry-run': {
       const file = args[1];
-      if (!file) { console.error('❌ Pipeline-Datei angeben!'); process.exit(1); }
+      if (!file) {
+        console.error('❌ Pipeline-Datei angeben!');
+        process.exit(1);
+      }
       const filePath = path.resolve(file);
       const result = await runner.run(filePath, vars, { dryRun: true });
       console.log('\n📊 Dry-Run Ergebnis:', JSON.stringify(result, null, 2));
@@ -89,14 +104,17 @@ Umgebungsvariablen:
 
     case 'validate': {
       const file = args[1];
-      if (!file) { console.error('❌ Pipeline-Datei angeben!'); process.exit(1); }
+      if (!file) {
+        console.error('❌ Pipeline-Datei angeben!');
+        process.exit(1);
+      }
       const filePath = path.resolve(file);
       const result = runner.validate(filePath);
       if (result.valid) {
         console.log(`✅ Pipeline "${result.name}" ist gültig (${result.steps} Steps)`);
       } else {
         console.error('❌ Validierungsfehler:');
-        result.errors.forEach(e => console.error(`  - ${e}`));
+        result.errors.forEach((e) => console.error(`  - ${e}`));
         process.exit(1);
       }
       break;
@@ -106,7 +124,7 @@ Umgebungsvariablen:
       const pipelinesDir = path.join(__dirname, '../pipelines');
       const pipelines = runner.listPipelines(pipelinesDir);
       console.log('\n📋 Verfügbare Pipelines:\n');
-      pipelines.forEach(p => {
+      pipelines.forEach((p) => {
         console.log(`  📄 ${p.file}`);
         console.log(`     Name: ${p.name}`);
         if (p.description) console.log(`     Beschreibung: ${p.description}`);
@@ -144,7 +162,7 @@ Umgebungsvariablen:
   }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('❌ Fehler:', err.message);
   process.exit(1);
 });

@@ -11,9 +11,12 @@ const RollbackHandler = require('./RollbackHandler');
 const VariableResolver = require('./VariableResolver');
 
 const log = {
-  info: (msg, meta = {}) => console.log(JSON.stringify({ level: 'info', ts: new Date().toISOString(), msg, ...meta })),
-  warn: (msg, meta = {}) => console.warn(JSON.stringify({ level: 'warn', ts: new Date().toISOString(), msg, ...meta })),
-  error: (msg, meta = {}) => console.error(JSON.stringify({ level: 'error', ts: new Date().toISOString(), msg, ...meta })),
+  info: (msg, meta = {}) =>
+    console.log(JSON.stringify({ level: 'info', ts: new Date().toISOString(), msg, ...meta })),
+  warn: (msg, meta = {}) =>
+    console.warn(JSON.stringify({ level: 'warn', ts: new Date().toISOString(), msg, ...meta })),
+  error: (msg, meta = {}) =>
+    console.error(JSON.stringify({ level: 'error', ts: new Date().toISOString(), msg, ...meta })),
 };
 
 class PipelineRunner {
@@ -46,7 +49,9 @@ class PipelineRunner {
     const errors = [];
 
     if (!pipeline || typeof pipeline !== 'object') {
-      throw new Error(`Pipeline-Validierung fehlgeschlagen (${source}):\n  - Ungültiges Pipeline-Format`);
+      throw new Error(
+        `Pipeline-Validierung fehlgeschlagen (${source}):\n  - Ungültiges Pipeline-Format`,
+      );
     }
 
     if (!pipeline.name) errors.push('Pipeline benötigt ein "name" Feld');
@@ -69,7 +74,9 @@ class PipelineRunner {
     }
 
     if (errors.length > 0) {
-      throw new Error(`Pipeline-Validierung fehlgeschlagen (${source}):\n  - ${errors.join('\n  - ')}`);
+      throw new Error(
+        `Pipeline-Validierung fehlgeschlagen (${source}):\n  - ${errors.join('\n  - ')}`,
+      );
     }
 
     return { valid: true, errors: [] };
@@ -101,14 +108,18 @@ class PipelineRunner {
     const pipeline = await this.loadPipeline(filePath);
     const dryRun = options.dryRun || false;
 
-    log.info('Pipeline started', { pipeline: pipeline.name, runId, mode: dryRun ? 'dry-run' : 'live' });
+    log.info('Pipeline started', {
+      pipeline: pipeline.name,
+      runId,
+      mode: dryRun ? 'dry-run' : 'live',
+    });
 
     // Laufzeit-Kontext aufbauen
     const context = {
       trigger: { ...vars, ...pipeline.trigger },
       vars,
       steps: {},
-      run: { id: runId, pipeline: pipeline.name, startedAt: new Date().toISOString() }
+      run: { id: runId, pipeline: pipeline.name, startedAt: new Date().toISOString() },
     };
 
     const run = {
@@ -121,7 +132,7 @@ class PipelineRunner {
       completedAt: null,
       vars,
       steps: [],
-      rollback: null
+      rollback: null,
     };
 
     this.runs.set(runId, run);
@@ -146,9 +157,7 @@ class PipelineRunner {
 
         // Rollback ausführen
         if (pipeline.rollback && pipeline.rollback.length > 0) {
-          const rollbackResults = await this.rollbackHandler.execute(
-            pipeline.rollback, context, i
-          );
+          const rollbackResults = await this.rollbackHandler.execute(pipeline.rollback, context, i);
           run.rollback = rollbackResults;
         }
 
@@ -183,7 +192,7 @@ class PipelineRunner {
     const files = await fs.promises.readdir(dir);
     const results = [];
 
-    for (const f of files.filter(f => f.endsWith('.yaml') || f.endsWith('.yml'))) {
+    for (const f of files.filter((f) => f.endsWith('.yaml') || f.endsWith('.yml'))) {
       try {
         const content = await fs.promises.readFile(path.join(dir, f), 'utf8');
         const pipeline = yaml.load(content);
@@ -192,7 +201,7 @@ class PipelineRunner {
           name: pipeline.name || f,
           description: pipeline.description || '',
           steps: (pipeline.steps || []).length,
-          hasRollback: !!(pipeline.rollback && pipeline.rollback.length > 0)
+          hasRollback: !!(pipeline.rollback && pipeline.rollback.length > 0),
         });
       } catch {
         results.push({ file: f, name: f, error: 'Parsing fehlgeschlagen' });

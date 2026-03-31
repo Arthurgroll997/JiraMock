@@ -37,7 +37,9 @@ class BaseConnector {
   async execute(actionName, params = {}, dryRun = false) {
     const action = this.actions[actionName];
     if (!action) {
-      throw new Error(`Action "${actionName}" nicht gefunden in ${this.name}. Verfügbar: ${Object.keys(this.actions).join(', ')}`);
+      throw new Error(
+        `Action "${actionName}" nicht gefunden in ${this.name}. Verfügbar: ${Object.keys(this.actions).join(', ')}`,
+      );
     }
 
     // Auto-Authentifizierung beim ersten Aufruf
@@ -58,7 +60,7 @@ class BaseConnector {
         action: actionName,
         method: action.method,
         url,
-        params
+        params,
       };
     }
 
@@ -66,12 +68,12 @@ class BaseConnector {
     const hasBody = ['POST', 'PUT', 'PATCH'].includes(action.method.toUpperCase());
     const headers = {
       'Content-Type': 'application/json',
-      ...this.getAuthHeaders()
+      ...this.getAuthHeaders(),
     };
 
     const fetchOptions = {
       method: action.method.toUpperCase(),
-      headers
+      headers,
     };
 
     if (hasBody) {
@@ -95,7 +97,9 @@ class BaseConnector {
     }
 
     if (!response.ok) {
-      throw new Error(`${this.name}.${actionName} fehlgeschlagen (${response.status}): ${JSON.stringify(data)}`);
+      throw new Error(
+        `${this.name}.${actionName} fehlgeschlagen (${response.status}): ${JSON.stringify(data)}`,
+      );
     }
 
     return data;

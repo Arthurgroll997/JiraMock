@@ -48,7 +48,9 @@ app.use('/rest/assets/1.0', require('./routes/assets'));
 
 // --- 404 ---
 app.use((req, res) => {
-  res.status(404).json({ errorMessages: [`${req.method} ${req.path} is not a valid endpoint`], errors: {} });
+  res
+    .status(404)
+    .json({ errorMessages: [`${req.method} ${req.path} is not a valid endpoint`], errors: {} });
 });
 
 // --- Seed Data ---
