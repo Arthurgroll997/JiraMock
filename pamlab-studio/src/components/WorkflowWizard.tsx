@@ -31,14 +31,6 @@ export default function WorkflowWizard({ onNavigate, onLoadScript, initialTempla
   const [stepParams, setStepParams] = useState<Record<string, string>>({});
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  // Auto-load template from Welcome screen
-  useEffect(() => {
-    if (initialTemplate != null && initialTemplate >= 0 && initialTemplate < workflowTemplates.length) {
-      loadTemplate(workflowTemplates[initialTemplate]);
-      onTemplateConsumed?.();
-    }
-  }, []);
-
   // ── Load template ────────────────────────────────────────────────
   const loadTemplate = (tpl: Workflow) => {
     setWorkflow({
@@ -47,6 +39,15 @@ export default function WorkflowWizard({ onNavigate, onLoadScript, initialTempla
     });
     setWizard('steps');
   };
+
+  // Auto-load template from Welcome screen
+  useEffect(() => {
+    if (initialTemplate != null && initialTemplate >= 0 && initialTemplate < workflowTemplates.length) {
+      loadTemplate(workflowTemplates[initialTemplate]);
+      onTemplateConsumed?.();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Step management ──────────────────────────────────────────────
   const addStep = useCallback(() => {

@@ -36,16 +36,16 @@ const triggerTemplates: Record<string, string> = {
   'matrix42-ticket': `# Trigger: Matrix42 ESM Ticket
 # This workflow is triggered when a ticket is approved in Matrix42.
 # In production, configure a Matrix42 webhook to call this script.
-\$ticketId = Read-Host "Enter approved Ticket ID"
+$ticketId = Read-Host "Enter approved Ticket ID"
 `,
   'servicenow-request': `# Trigger: ServiceNow Request
 # This workflow is triggered by an approved ServiceNow request.
 # Configure a ServiceNow Business Rule or Flow to call this script.
-\$requestNumber = Read-Host "Enter ServiceNow Request Number"
+$requestNumber = Read-Host "Enter ServiceNow Request Number"
 `,
   'jira-request': `# Trigger: Jira Service Management Request
 # This workflow is triggered by an approved Jira SM request.
-\$issueKey = Read-Host "Enter Jira Issue Key"
+$issueKey = Read-Host "Enter Jira Issue Key"
 `,
 };
 
@@ -91,24 +91,24 @@ function generateStep(step: WorkflowStep, index: number): string {
   const bodyKeys = Object.keys(bodyParams);
   if (bodyKeys.length > 0 && (action.method === 'POST' || action.method === 'PUT' || action.method === 'PATCH')) {
     const stepVar = `step${index + 1}Body`;
-    lines.push(`\$${stepVar} = @{`);
+    lines.push(`$${stepVar} = @{`);
     for (const [key, val] of Object.entries(bodyParams)) {
       // Special: members array for group actions
       if (key === 'sAMAccountName' && action.id === 'ad-add-to-group') {
         lines.push(`  members = @("${val}")`);
       } else if (val === 'true' || val === 'false') {
         // Boolean values — PowerShell $true/$false
-        lines.push(`  ${key} = \$${val}`);
+        lines.push(`  ${key} = $${val}`);
       } else {
         lines.push(`  ${key} = "${val}"`);
       }
     }
     lines.push(`}`);
-    lines.push(`\$step${index + 1}Result = Invoke-RestMethod -Uri "\$${varName}${path}" -Method ${action.method} -Body (\$${stepVar} | ConvertTo-Json) -ContentType "application/json" -Headers \$headers`);
+    lines.push(`$step${index + 1}Result = Invoke-RestMethod -Uri "$${varName}${path}" -Method ${action.method} -Body ($${stepVar} | ConvertTo-Json) -ContentType "application/json" -Headers $headers`);
   } else if (action.method === 'DELETE') {
-    lines.push(`\$step${index + 1}Result = Invoke-RestMethod -Uri "\$${varName}${path}" -Method ${action.method} -Headers \$headers`);
+    lines.push(`$step${index + 1}Result = Invoke-RestMethod -Uri "$${varName}${path}" -Method ${action.method} -Headers $headers`);
   } else {
-    lines.push(`\$step${index + 1}Result = Invoke-RestMethod -Uri "\$${varName}${path}" -Method ${action.method} -Headers \$headers`);
+    lines.push(`$step${index + 1}Result = Invoke-RestMethod -Uri "$${varName}${path}" -Method ${action.method} -Headers $headers`);
   }
 
   lines.push(`Write-Host "  ✓ Done" -ForegroundColor Green`);
@@ -138,17 +138,17 @@ export function generateScript(workflow: Workflow): string {
   lines.push('# ── Configuration ──────────────────────────────────────────────');
   lines.push('# Replace these with your real environment URLs:');
   for (const cid of usedConnectors) {
-    lines.push(`\$${baseUrlVar(cid)} = "${baseUrlValue(cid)}"`);
+    lines.push(`$${baseUrlVar(cid)} = "${baseUrlValue(cid)}"`);
   }
   lines.push('');
 
   // Auth header
   lines.push('# Authentication (adjust to your environment)');
-  lines.push(`\$credentials = Get-Credential -Message "Enter service account credentials"`);
-  lines.push(`\$pair = "\$(\$credentials.UserName):\$(\$credentials.GetNetworkCredential().Password)"`);
-  lines.push(`\$bytes = [System.Text.Encoding]::ASCII.GetBytes(\$pair)`);
-  lines.push(`\$base64 = [System.Convert]::ToBase64String(\$bytes)`);
-  lines.push(`\$headers = @{ Authorization = "Basic \$base64" }`);
+  lines.push(`$credentials = Get-Credential -Message "Enter service account credentials"`);
+  lines.push(`$pair = "$($credentials.UserName):$($credentials.GetNetworkCredential().Password)"`);
+  lines.push(`$bytes = [System.Text.Encoding]::ASCII.GetBytes($pair)`);
+  lines.push(`$base64 = [System.Convert]::ToBase64String($bytes)`);
+  lines.push(`$headers = @{ Authorization = "Basic $base64" }`);
   lines.push('');
 
   // Error handling
@@ -191,14 +191,14 @@ export function generateTestScript(workflow: Workflow): string {
   // Base URLs
   const usedConnectors = [...new Set(workflow.steps.map(s => s.connectorId))];
   for (const cid of usedConnectors) {
-    lines.push(`\$${baseUrlVar(cid)} = "${baseUrlValue(cid)}"`);
+    lines.push(`$${baseUrlVar(cid)} = "${baseUrlValue(cid)}"`);
   }
   lines.push('');
 
   // Simple auth
   const pair = `${settings.fudoUser}:${settings.fudoPass}`;
   const b64 = btoa(pair);
-  lines.push(`\$headers = @{ Authorization = "Basic ${b64}" }`);
+  lines.push(`$headers = @{ Authorization = "Basic ${b64}" }`);
   lines.push('');
 
   for (let i = 0; i < workflow.steps.length; i++) {

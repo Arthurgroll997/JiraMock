@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { useState } from 'react';
 
 export interface RunRecord {
   id: string;
@@ -29,12 +30,8 @@ export function getRuns(): RunRecord[] {
 }
 
 export default function RunHistory() {
-  const [runs, setRuns] = useState<RunRecord[]>([]);
+  const [runs, setRuns] = useState<RunRecord[]>(() => getRuns());
   const [expanded, setExpanded] = useState<string | null>(null);
-
-  useEffect(() => {
-    setRuns(getRuns());
-  }, []);
 
   const clearHistory = () => {
     localStorage.removeItem(STORAGE_KEY);

@@ -50,24 +50,6 @@ export default function CodeEditor({ script, onScriptChange, onResults, onNaviga
     URL.revokeObjectURL(url);
   }, [script]);
 
-  // ── Global keyboard shortcut listeners ───────────────────────────
-  useEffect(() => {
-    const onRun = () => handleRun();
-    const onSave = () => handleSave();
-    const onExport = () => handleExport();
-    const onExportProd = () => handleExportProduction();
-    window.addEventListener('pamlab:run', onRun);
-    window.addEventListener('pamlab:save', onSave);
-    window.addEventListener('pamlab:export', onExport);
-    window.addEventListener('pamlab:export-production', onExportProd);
-    return () => {
-      window.removeEventListener('pamlab:run', onRun);
-      window.removeEventListener('pamlab:save', onSave);
-      window.removeEventListener('pamlab:export', onExport);
-      window.removeEventListener('pamlab:export-production', onExportProd);
-    };
-  });
-
   // ── Run: execute all steps ───────────────────────────────────────
   const handleRun = async () => {
     setRunning(true);
@@ -269,6 +251,24 @@ export default function CodeEditor({ script, onScriptChange, onResults, onNaviga
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  // ── Global keyboard shortcut listeners ───────────────────────────
+  useEffect(() => {
+    const onRun = () => handleRun();
+    const onSave = () => handleSave();
+    const onExport = () => handleExport();
+    const onExportProd = () => handleExportProduction();
+    window.addEventListener('pamlab:run', onRun);
+    window.addEventListener('pamlab:save', onSave);
+    window.addEventListener('pamlab:export', onExport);
+    window.addEventListener('pamlab:export-production', onExportProd);
+    return () => {
+      window.removeEventListener('pamlab:run', onRun);
+      window.removeEventListener('pamlab:save', onSave);
+      window.removeEventListener('pamlab:export', onExport);
+      window.removeEventListener('pamlab:export-production', onExportProd);
+    };
+  });
 
   return (
     <div className="flex flex-col h-[calc(100vh-0px)]">

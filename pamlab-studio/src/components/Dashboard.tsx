@@ -33,6 +33,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: Page) => voi
       })
     );
     setStatuses(results);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchStats = useCallback(async () => {
@@ -58,6 +59,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: Page) => voi
       })
     );
     setStats(results.map(r => ({ label: r.label, value: r.value, icon: r.icon })));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
