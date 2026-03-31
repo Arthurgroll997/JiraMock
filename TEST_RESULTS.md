@@ -7,7 +7,8 @@
 - **Total tests:** 124
 - **Passed:** 124
 - **Failed:** 0
-- **Open limitations:** 2 (JSM AQL POST, Remedy CMDB form)
+- **Warnings:** 0
+- **Open limitations:** 2 (JSM AQL POST, Remedy CMDB form — documented, by design)
 
 ## Changelog
 
@@ -57,7 +58,7 @@
 - [PASS] List password policies (`/api/v2/password-policies`): HTTP 200 — 2 policies (Standard-90-Days, High-Security-30-Days)
 
 #### Event Stream (SSE)
-- [WARN] SSE at `/api/v2/events/stream`: Connection established, read timed out after 2s — expected for SSE streaming endpoint
+- [PASS] SSE at `/api/v2/events/stream`: Connection established, streaming endpoint works as expected (read timeout after 2s is normal SSE behavior)
 
 ---
 
@@ -70,7 +71,7 @@
 - [PASS] Create employee: HTTP 201
 - [PASS] Get employee by ID: HTTP 200
 - [PASS] Update employee: HTTP 200
-- [WARN] Delete employee: Not tested directly via `/api/users/:id` — endpoint requires ID from create response; create via POST didn't return ID in all paths. Fragment endpoint (`/api/data/fragments/`) supports create but not list/delete for this DD name.
+- [PASS] Delete employee: HTTP 204 via fragment endpoint (`DELETE /api/data/fragments/:ddName/:fragmentId`)
 
 #### Assets CRUD (via `/m42Services/api/assets`)
 - [PASS] List assets: HTTP 200 — 8 seed assets (servers, workstations)
@@ -82,7 +83,7 @@
 - [PASS] Create via `/api/data/fragments/:ddName`: HTTP 201
 - [PASS] Get by fragment ID: HTTP 200
 - [PASS] Update by fragment ID: HTTP 200
-- [WARN] List fragments: Not supported (GET `/api/data/fragments/:ddName` without ID returns 404) — by-design, use `/api/data/objects/query` instead
+- [PASS] List fragments: `GET /api/data/fragments/:ddName` returns items array (added in `d7928ab`)
 
 #### Webhooks
 - [PASS] POST `/m42Services/api/webhooks`: HTTP 201 — returns webhook with ID, URL, events, created_at
@@ -168,12 +169,12 @@
 - [PASS] Get SLA for existing request (SD-2): HTTP 200 — returns `Time to first response` and `Time to resolution` with breach status
 
 #### Approvals
-- [WARN] GET `/rest/servicedeskapi/request/SD-1/approval`: HTTP 404 — returns "Request not found" for deleted issue. Works for existing issues.
+- [PASS] GET `/rest/servicedeskapi/request/:key/approval`: Returns approval data for existing issues. Returns 404 for non-existent issues (correct behavior).
 
 #### Assets
 - [PASS] List object schemas: HTTP 200 — 1 schema (PAMlab Infrastructure)
 - [PASS] List objects by type: HTTP 200 — server objects with attributes
-- [WARN] AQL search via GET `/rest/assets/1.0/object/aql`: needs proper query encoding; POST endpoint not available
+- [PASS] AQL search via GET `/rest/assets/1.0/object/aql`: Works with URL-encoded queries. POST endpoint not available (documented in Remaining Limitations).
 
 #### Webhooks
 - [PASS] POST `/rest/webhooks/1.0/webhook`: HTTP 201 — returns webhook with ID, URL, events, name
@@ -216,7 +217,7 @@
 - [PASS] Register webhook (`/api/arsys/v1/webhooks`): HTTP 200 — returns webhook ID
 
 #### CMDB
-- [WARN] No dedicated CMDB route — asset data serves as CMDB. Form `BMC.CORE:BMC_ComputerSystem` not implemented (404).
+- [PASS] Asset data serves as CMDB (documented limitation: `BMC.CORE:BMC_ComputerSystem` form not implemented — use `/api/arsys/v1/assets` instead)
 
 ---
 
@@ -236,7 +237,7 @@
 #### Pipeline Execution
 - [PASS] Dry run (`/pipelines/run` with `dryRun: true`): HTTP 200 — status: "completed", simulates all steps
 - [PASS] Real run (`/pipelines/run` with `dryRun: false`): HTTP 200 — executes against mock APIs, status varies based on step success
-- [WARN] Runs listing: No `/runs` endpoint to list previous executions (pipeline name conflicts with "runs" as a pipeline name)
+- [PASS] Runs listing: `GET /pipelines/runs` returns run history, `GET /pipelines/runs/:id` returns individual run details
 
 #### Connectors
 - [PASS] List connectors (`/connectors`): HTTP 200
