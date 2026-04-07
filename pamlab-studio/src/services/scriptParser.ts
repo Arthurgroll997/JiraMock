@@ -15,6 +15,7 @@ export function parseScript(script: string): ApiCall[] {
     matrixBase: settings.matrixUrl,
     fudoBase: settings.fudoUrl,
     adBase: settings.adUrl,
+    entraBase: settings.azureAdUrl,
     snowBase: settings.snowUrl,
     jsmBase: settings.jsmUrl,
     remedyBase: settings.remedyUrl,

@@ -36,6 +36,7 @@ describe('Pipeline Engine', () => {
     const res = await request(app).get('/connectors');
     expect(res.status).toBe(200);
     expect(res.body.connectors).toBeDefined();
+    expect(res.body.connectors['azure-ad']).toBeDefined();
     expect(res.body.connectors.servicenow).toBeDefined();
     expect(res.body.connectors.jsm).toBeDefined();
     expect(res.body.connectors.remedy).toBeDefined();
@@ -47,6 +48,13 @@ describe('Pipeline Engine', () => {
     const res = await request(app).get('/connectors/fudo-pam/actions');
     expect(res.status).toBe(200);
     expect(res.body.actions).toBeDefined();
+  });
+
+  test('GET /connectors/azure-ad/actions returns actions', async () => {
+    const res = await request(app).get('/connectors/azure-ad/actions');
+    expect(res.status).toBe(200);
+    expect(res.body.actions).toBeDefined();
+    expect(res.body.actions['pim.activate-role']).toBeDefined();
   });
 
   test('GET /connectors/servicenow/actions returns actions', async () => {
@@ -151,6 +159,12 @@ describe('Pipeline Engine', () => {
   test('GET /pipelines/nonexistent.yaml returns 404', async () => {
     const res = await request(app).get('/pipelines/nonexistent.yaml');
     expect(res.status).toBe(404);
+  });
+
+  test('GET /pipelines/entra-pim-activation.yaml returns pipeline', async () => {
+    const res = await request(app).get('/pipelines/entra-pim-activation.yaml');
+    expect(res.status).toBe(200);
+    expect(res.body.pipeline.name).toBe('Entra PIM Activation');
   });
 
   test('GET /pipelines/:name rejects path traversal attempts', async () => {

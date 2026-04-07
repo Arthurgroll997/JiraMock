@@ -41,6 +41,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: Page) => voi
       { name: 'Fudo PAM', url: settings.fudoUrl },
       { name: 'Matrix42 ESM', url: settings.matrixUrl },
       { name: 'Active Directory', url: settings.adUrl },
+      { name: 'Microsoft Entra ID', url: settings.azureAdUrl },
       { name: 'ServiceNow ITSM', url: settings.snowUrl },
       { name: 'Jira Service Mgmt', url: settings.jsmUrl },
       { name: 'BMC Remedy/Helix', url: settings.remedyUrl },
@@ -55,6 +56,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: Page) => voi
     setStatuses(results);
   }, [
     settings.adUrl,
+    settings.azureAdUrl,
     settings.cyberarkUrl,
     settings.fudoUrl,
     settings.jsmUrl,
@@ -126,7 +128,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: Page) => voi
     <div className="p-6">
       <h2 className="text-2xl font-bold text-gray-100 mb-6">Dashboard</h2>
 
-      <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 xl:grid-cols-7">
+      <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 xl:grid-cols-8">
         {statuses.map((status) => (
           <ApiStatusCard key={status.name} status={status} />
         ))}
@@ -166,6 +168,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: Page) => voi
               `${settings.fudoUrl}/reset`,
               `${settings.matrixUrl}/reset`,
               `${settings.adUrl}/reset`,
+              `${settings.azureAdUrl}/reset`,
               `${settings.snowUrl}/reset`,
               `${settings.jsmUrl}/reset`,
               `${settings.remedyUrl}/reset`,

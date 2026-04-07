@@ -6,6 +6,7 @@ type RuntimeConfig = Partial<
     | 'fudoUrl'
     | 'matrixUrl'
     | 'adUrl'
+    | 'azureAdUrl'
     | 'snowUrl'
     | 'jsmUrl'
     | 'remedyUrl'
@@ -25,6 +26,7 @@ export function getDefaultSettings(overrides: Partial<AppSettings> = {}): AppSet
     fudoUrl: '/api/fudo',
     matrixUrl: '/api/matrix42',
     adUrl: '/api/ad',
+    azureAdUrl: '/api/azure-ad',
     snowUrl: '/api/snow',
     jsmUrl: '/api/jsm',
     remedyUrl: '/api/remedy',

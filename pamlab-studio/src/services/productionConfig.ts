@@ -5,7 +5,15 @@ import { baseUrlVar, baseVarToConnectorId, headersVar } from './connectorConfig'
 export interface SystemConfig {
   id: string;
   name: string;
-  type: 'fudo' | 'matrix42' | 'ad' | 'servicenow' | 'jira' | 'remedy' | 'cyberark';
+  type:
+    | 'fudo'
+    | 'matrix42'
+    | 'ad'
+    | 'azure-ad'
+    | 'servicenow'
+    | 'jira'
+    | 'remedy'
+    | 'cyberark';
   baseUrl: string;
   auth: AuthConfig;
 }
@@ -107,7 +115,9 @@ function replaceHeaderReference(line: string): string {
   const match = line.match(/\$([A-Za-z]+Base)\b/);
   if (!match) return line;
   const connectorId = baseVarToConnectorId(match[1]);
-  return connectorId ? line.replace('-Headers $headers', `-Headers $${headersVar(connectorId)}`) : line;
+  return connectorId
+    ? line.replace('-Headers $headers', `-Headers $${headersVar(connectorId)}`)
+    : line;
 }
 
 function stripLegacyAuthLines(lines: string[]): string[] {
@@ -223,6 +233,18 @@ export function generateProductionConfigTemplate(): SystemConfig[] {
       },
     },
     {
+      id: 'azure-ad',
+      name: 'Microsoft Entra ID',
+      type: 'azure-ad',
+      baseUrl: 'https://graph.microsoft.com',
+      auth: {
+        method: 'oauth2',
+        clientId: '',
+        clientSecret: '',
+        tokenUrl: 'https://login.microsoftonline.com/contoso.onmicrosoft.com/oauth2/v2.0/token',
+      },
+    },
+    {
       id: 'servicenow',
       name: 'ServiceNow',
       type: 'servicenow',
@@ -259,9 +281,7 @@ export function generateProductionConfigTemplate(): SystemConfig[] {
 }
 
 export function convertScriptToProduction(script: string, configs: SystemConfig[]): string {
-  const usedConfigs = configs.filter((config) =>
-    script.includes(`$${baseUrlVar(config.id)}`),
-  );
+  const usedConfigs = configs.filter((config) => script.includes(`$${baseUrlVar(config.id)}`));
   const relevantConfigs = usedConfigs.length > 0 ? usedConfigs : configs;
 
   let lines = script.split('\n');

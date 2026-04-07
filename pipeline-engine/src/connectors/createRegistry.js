@@ -1,5 +1,6 @@
 const ConnectorRegistry = require('./ConnectorRegistry');
 const ActiveDirectoryConnector = require('./active-directory');
+const AzureAdConnector = require('./azure-ad');
 const CyberArkConnector = require('./cyberark');
 const FudoPamConnector = require('./fudo-pam');
 const JsmConnector = require('./jsm');
@@ -17,6 +18,7 @@ function createRegistry(env = process.env) {
   const fudo = new FudoPamConnector(env.FUDO_URL || 'http://localhost:8443');
   const matrix42 = new Matrix42EsmConnector(env.M42_URL || 'http://localhost:8444');
   const activeDirectory = new ActiveDirectoryConnector(env.AD_URL || 'http://localhost:8445');
+  const azureAd = new AzureAdConnector(env.AZURE_AD_URL || 'http://localhost:8452');
   const serviceNow = new ServiceNowConnector(env.SNOW_URL || 'http://localhost:8447');
   const jsm = new JsmConnector(env.JSM_URL || 'http://localhost:8448');
   const remedy = new RemedyConnector(env.REMEDY_URL || 'http://localhost:8449');
@@ -24,7 +26,8 @@ function createRegistry(env = process.env) {
 
   registerConnectorNames(registry, ['fudo-pam', 'fudo'], fudo);
   registerConnectorNames(registry, ['matrix42-esm', 'matrix42'], matrix42);
-  registerConnectorNames(registry, ['active-directory', 'ad', 'azure-ad'], activeDirectory);
+  registerConnectorNames(registry, ['active-directory', 'ad'], activeDirectory);
+  registerConnectorNames(registry, ['azure-ad', 'entra', 'entra-id'], azureAd);
   registerConnectorNames(registry, ['servicenow', 'service-now', 'snow'], serviceNow);
   registerConnectorNames(registry, ['jsm', 'jira'], jsm);
   registerConnectorNames(registry, ['remedy'], remedy);

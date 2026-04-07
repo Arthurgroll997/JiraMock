@@ -2,6 +2,7 @@ import type { AppSettings } from '../types';
 
 const baseVarMap: Record<string, string> = {
   ad: 'adBase',
+  'azure-ad': 'entraBase',
   cyberark: 'cyberarkBase',
   fudo: 'fudoBase',
   matrix42: 'matrixBase',
@@ -12,6 +13,7 @@ const baseVarMap: Record<string, string> = {
 
 const settingsValueMap: Record<string, keyof AppSettings> = {
   ad: 'adUrl',
+  'azure-ad': 'azureAdUrl',
   cyberark: 'cyberarkUrl',
   fudo: 'fudoUrl',
   matrix42: 'matrixUrl',

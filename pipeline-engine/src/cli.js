@@ -68,6 +68,7 @@ Umgebungsvariablen:
   FUDO_URL    Fudo PAM API URL    (Standard: http://localhost:8443)
   M42_URL     Matrix42 ESM URL    (Standard: http://localhost:8444)
   AD_URL      Active Directory URL (Standard: http://localhost:8445)
+  AZURE_AD_URL Microsoft Entra ID URL (Standard: http://localhost:8452)
   SNOW_URL    ServiceNow URL      (Standard: http://localhost:8447)
   JSM_URL     JSM URL             (Standard: http://localhost:8448)
   REMEDY_URL  Remedy URL          (Standard: http://localhost:8449)
