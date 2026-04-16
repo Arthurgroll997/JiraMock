@@ -73,27 +73,35 @@ function getFieldValue(issue, field) {
       return issue.fields.created || '';
     case 'updated':
       return issue.fields.updated || '';
+    case 'labels':
+      return Array.isArray(issue.fields.labels) ? issue.fields.labels : [];
     default:
       return issue.fields[field] || '';
   }
 }
 
 function matchFilter(issue, filter) {
-  const val = String(getFieldValue(issue, filter.field)).toLowerCase();
+  const raw = getFieldValue(issue, filter.field);
+  const isArray = Array.isArray(raw);
+  const val = isArray ? raw.map((v) => String(v).toLowerCase()) : [String(raw).toLowerCase()];
   const target = filter.value.toLowerCase();
   switch (filter.op) {
     case '=':
-      return val === target;
+      return val.some((v) => v === target);
     case '!=':
-      return val !== target;
+      return val.every((v) => v !== target);
     case '~':
-      return val.includes(target);
+      return val.some((v) => v.includes(target));
     case 'IS':
-      return target === 'empty' ? !val : !!val;
+      return target === 'empty' ? val.length === 0 || val.every((v) => !v) : val.some((v) => !!v);
     case 'IN':
-      return filter.values ? filter.values.some((v) => val === v.toLowerCase()) : false;
+      return filter.values
+        ? filter.values.some((fv) => val.some((v) => v === fv.toLowerCase()))
+        : false;
     case 'NOT IN':
-      return filter.values ? !filter.values.some((v) => val === v.toLowerCase()) : true;
+      return filter.values
+        ? !filter.values.some((fv) => val.some((v) => v === fv.toLowerCase()))
+        : true;
     default:
       return true;
   }

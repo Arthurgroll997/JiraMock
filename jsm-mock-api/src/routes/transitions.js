@@ -14,7 +14,7 @@ router.get('/:issueIdOrKey/transitions', (req, res) => {
   const currentStatus = issue.fields.status.name;
   const wf = store.transitions[typeName] || [];
   const available = wf
-    .filter((t) => t.from === currentStatus)
+    .filter((t) => t.from === currentStatus || t.from === '*')
     .map((t) => ({
       id: t.id,
       name: t.name,
@@ -37,7 +37,7 @@ router.post('/:issueIdOrKey/transitions', (req, res) => {
   const typeName = issue.fields.issuetype.name;
   const currentStatus = issue.fields.status.name;
   const wf = store.transitions[typeName] || [];
-  const t = wf.find((t) => t.id === transition.id && t.from === currentStatus);
+  const t = wf.find((t) => t.id === transition.id && (t.from === currentStatus || t.from === '*'));
   if (!t)
     return res
       .status(400)

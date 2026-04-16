@@ -79,6 +79,12 @@ router.post('/', (req, res) => {
   const key = `${projectKey}-${store.counters[projectKey]}`;
   const id = String(10000 + store.issues.length + 1);
   const now = new Date().toISOString().replace('Z', '+0000');
+  // Auto-create project in store if it doesn't exist yet
+  let project = store.projects.find((p) => p.key === projectKey);
+  if (!project) {
+    project = { id: String(store.projects.length + 1), key: projectKey, name: projectKey, projectTypeKey: 'service_desk' };
+    store.projects.push(project);
+  }
   const issue = {
     id,
     key,
@@ -88,7 +94,7 @@ router.post('/', (req, res) => {
       issuetype: fields.issuetype || { id: '1', name: 'Incident' },
       priority: fields.priority || { id: '3', name: 'Major' },
       status: { id: '1', name: 'Open' },
-      project: store.projects.find((p) => p.key === projectKey),
+      project: project,
       assignee: fields.assignee || null,
       reporter:
         fields.reporter ||

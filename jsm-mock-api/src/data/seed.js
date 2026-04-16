@@ -107,6 +107,14 @@ function seed() {
       { from: 'Review', to: 'Closed', id: '76', name: 'Close' },
       { from: 'Review', to: 'Implementing', id: '77', name: 'Rework' },
     ],
+    Task: [
+      { from: 'Open', to: 'In Progress', id: '21', name: 'Start Progress' },
+      { from: '*', to: 'Closed', id: '61', name: 'Close' },
+    ],
+    Bug: [
+      { from: 'Open', to: 'In Progress', id: '21', name: 'Start Progress' },
+      { from: '*', to: 'Closed', id: '61', name: 'Close' },
+    ],
   };
 
   // Helper to build user ref
