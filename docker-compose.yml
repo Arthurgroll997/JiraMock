@@ -1,128 +1,9 @@
 services:
-  fudo-mock:
-    build:
-      context: ./fudo-mock-api
-      dockerfile: Dockerfile
-    container_name: pamlab-fudo
-    ports:
-      - "8443:8443"
-    environment:
-      - PORT=8443
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8443/api/v2/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  matrix42-mock:
-    build:
-      context: ./matrix42-mock-api
-      dockerfile: Dockerfile
-    container_name: pamlab-matrix42
-    ports:
-      - "8444:8444"
-    environment:
-      - PORT=8444
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8444/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  ad-mock:
-    build:
-      context: ./ad-mock-api
-      dockerfile: Dockerfile
-    container_name: pamlab-ad
-    ports:
-      - "8445:8445"
-    environment:
-      - PORT=8445
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8445/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  azure-ad-mock:
-    build:
-      context: ./azure-ad-mock-api
-      dockerfile: Dockerfile
-    container_name: pamlab-azure-ad
-    ports:
-      - "8452:8452"
-    environment:
-      - PORT=8452
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8452/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  servicenow-mock:
-    build:
-      context: ./servicenow-mock-api
-      dockerfile: Dockerfile
-    container_name: pamlab-servicenow
-    ports:
-      - "8447:8447"
-    environment:
-      - PORT=8447
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8447/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  pipeline-engine:
-    build:
-      context: ./pipeline-engine
-      dockerfile: Dockerfile
-    container_name: pamlab-pipeline-engine
-    ports:
-      - "8446:8446"
-    environment:
-      - PORT=8446
-      - FUDO_URL=http://fudo-mock:8443
-      - M42_URL=http://matrix42-mock:8444
-      - AD_URL=http://ad-mock:8445
-      - AZURE_AD_URL=http://azure-ad-mock:8452
-      - SNOW_URL=http://servicenow-mock:8447
-      - JSM_URL=http://jsm-mock:8448
-      - REMEDY_URL=http://remedy-mock:8449
-      - CYBERARK_URL=http://cyberark-mock:8450
-    depends_on:
-      fudo-mock:
-        condition: service_healthy
-      matrix42-mock:
-        condition: service_healthy
-      ad-mock:
-        condition: service_healthy
-      azure-ad-mock:
-        condition: service_healthy
-      servicenow-mock:
-        condition: service_healthy
-      jsm-mock:
-        condition: service_healthy
-      remedy-mock:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8446/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
   jsm-mock:
     build:
       context: ./jsm-mock-api
       dockerfile: Dockerfile
-    container_name: pamlab-jsm
+    container_name: jiramock-jsm
     ports:
       - "8448:8448"
     environment:
@@ -134,69 +15,22 @@ services:
       timeout: 5s
       retries: 3
 
-  remedy-mock:
+  pipeline-engine:
     build:
-      context: ./remedy-mock-api
+      context: ./pipeline-engine
       dockerfile: Dockerfile
-    container_name: pamlab-remedy
+    container_name: jiramock-pipeline-engine
     ports:
-      - "8449:8449"
+      - "8446:8446"
     environment:
-      - PORT=8449
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8449/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  cyberark-mock:
-    build:
-      context: ./cyberark-mock-api
-      dockerfile: Dockerfile
-    container_name: pamlab-cyberark
-    ports:
-      - "8450:8450"
-    environment:
-      - PORT=8450
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8450/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  studio:
-    build:
-      context: ./pamlab-studio
-      dockerfile: Dockerfile
-    container_name: pamlab-studio
-    ports:
-      - "3000:3000"
-    environment:
-      - VITE_FUDO_URL=http://localhost:8443
-      - VITE_M42_URL=http://localhost:8444
-      - VITE_AD_URL=http://localhost:8445
-      - VITE_AZURE_AD_URL=http://localhost:8452
-      - VITE_SNOW_URL=http://localhost:8447
-      - VITE_JSM_URL=http://localhost:8448
-      - VITE_REMEDY_URL=http://localhost:8449
-      - VITE_CYBERARK_URL=http://localhost:8450
+      - PORT=8446
+      - JSM_URL=http://jsm-mock:8448
     depends_on:
-      fudo-mock:
-        condition: service_healthy
-      matrix42-mock:
-        condition: service_healthy
-      ad-mock:
-        condition: service_healthy
-      azure-ad-mock:
-        condition: service_healthy
-      servicenow-mock:
-        condition: service_healthy
       jsm-mock:
         condition: service_healthy
-      remedy-mock:
-        condition: service_healthy
-      cyberark-mock:
-        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8446/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

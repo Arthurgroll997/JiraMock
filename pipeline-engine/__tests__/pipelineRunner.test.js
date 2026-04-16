@@ -146,21 +146,4 @@ steps:
     expect(result.status).toBe('failed');
     expect(result.failedAt).toBe('Invalid foreach');
   });
-
-  test('v2 templates validate successfully', async () => {
-    const { runner } = createRunner();
-    const templateDir = path.join(__dirname, '..', 'pipelines');
-    const templates = [
-      'cross-itsm-incident.yaml',
-      'cmdb-reconciliation.yaml',
-      'multi-pam-password-rotation.yaml',
-      'azure-ad-pim-jit.yaml',
-      'remedy-major-incident-bridge.yaml',
-    ];
-
-    for (const fileName of templates) {
-      const result = await runner.validate(path.join(templateDir, fileName));
-      expect(result.valid).toBe(true);
-    }
-  });
 });

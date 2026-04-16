@@ -36,43 +36,14 @@ describe('Pipeline Engine', () => {
     const res = await request(app).get('/connectors');
     expect(res.status).toBe(200);
     expect(res.body.connectors).toBeDefined();
-    expect(res.body.connectors['azure-ad']).toBeDefined();
-    expect(res.body.connectors.servicenow).toBeDefined();
     expect(res.body.connectors.jsm).toBeDefined();
-    expect(res.body.connectors.remedy).toBeDefined();
-    expect(res.body.connectors.cyberark).toBeDefined();
   });
 
   // Connector actions
-  test('GET /connectors/fudo-pam/actions returns actions', async () => {
-    const res = await request(app).get('/connectors/fudo-pam/actions');
-    expect(res.status).toBe(200);
-    expect(res.body.actions).toBeDefined();
-  });
-
-  test('GET /connectors/azure-ad/actions returns actions', async () => {
-    const res = await request(app).get('/connectors/azure-ad/actions');
-    expect(res.status).toBe(200);
-    expect(res.body.actions).toBeDefined();
-    expect(res.body.actions['pim.activate-role']).toBeDefined();
-  });
-
-  test('GET /connectors/servicenow/actions returns actions', async () => {
-    const res = await request(app).get('/connectors/servicenow/actions');
-    expect(res.status).toBe(200);
-    expect(res.body.actions['incidents.create']).toBeDefined();
-  });
-
   test('GET /connectors/jsm/actions returns actions', async () => {
     const res = await request(app).get('/connectors/jsm/actions');
     expect(res.status).toBe(200);
     expect(res.body.actions['issues.create']).toBeDefined();
-  });
-
-  test('GET /connectors/remedy/actions returns actions', async () => {
-    const res = await request(app).get('/connectors/remedy/actions');
-    expect(res.status).toBe(200);
-    expect(res.body.actions['incidents.list']).toBeDefined();
   });
 
   test('GET /connectors/nonexistent/actions returns 404', async () => {
@@ -83,7 +54,7 @@ describe('Pipeline Engine', () => {
   // Validate pipeline - yaml content
   test('POST /pipelines/validate with valid yaml', async () => {
     const res = await request(app).post('/pipelines/validate').send({
-      yaml: 'name: test-pipeline\nsteps:\n  - name: step1\n    connector: fudo-pam\n    action: list-users',
+      yaml: 'name: test-pipeline\nsteps:\n  - name: step1\n    connector: jsm\n    action: issues.list',
     });
     expect(res.status).toBe(200);
     expect(res.body.valid).toBe(true);
@@ -143,28 +114,6 @@ describe('Pipeline Engine', () => {
       expect(res.status).toBe(200);
       expect(res.body.pipeline).toBeDefined();
     }
-  });
-
-  test('GET /pipelines includes new v2 templates', async () => {
-    const res = await request(app).get('/pipelines');
-    expect(res.status).toBe(200);
-    const files = res.body.pipelines.map((pipeline) => pipeline.file);
-    expect(files).toContain('cross-itsm-incident.yaml');
-    expect(files).toContain('cmdb-reconciliation.yaml');
-    expect(files).toContain('multi-pam-password-rotation.yaml');
-    expect(files).toContain('azure-ad-pim-jit.yaml');
-    expect(files).toContain('remedy-major-incident-bridge.yaml');
-  });
-
-  test('GET /pipelines/nonexistent.yaml returns 404', async () => {
-    const res = await request(app).get('/pipelines/nonexistent.yaml');
-    expect(res.status).toBe(404);
-  });
-
-  test('GET /pipelines/entra-pim-activation.yaml returns pipeline', async () => {
-    const res = await request(app).get('/pipelines/entra-pim-activation.yaml');
-    expect(res.status).toBe(200);
-    expect(res.body.pipeline.name).toBe('Entra PIM Activation');
   });
 
   test('GET /pipelines/:name rejects path traversal attempts', async () => {

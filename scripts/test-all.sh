@@ -8,15 +8,8 @@ set -e
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SERVICES=(
-  fudo-mock-api
-  matrix42-mock-api
-  ad-mock-api
-  azure-ad-mock-api
-  servicenow-mock-api
   jsm-mock-api
-  remedy-mock-api
   pipeline-engine
-  cyberark-mock-api
 )
 
 PASSED=0
